@@ -64,8 +64,8 @@ testProgram = Program { programDefinitions =
                       , entryPoint = "main"
                       }
       where
-          [plus, mul] = map (\f -> ValF 2 $ \[x, y] -> f x y) [(+), (*)]
-          [gt]        = map (\f -> ValP 2 $ \[x, y] -> f x y) [(>)]
+          [plus, mul] = map (\f -> ValF 2 $ \[x, y] -> f y x) [(+), (*)]
+          [gt]        = map (\f -> ValP 2 $ \[x, y] -> f y x) [(>)]
 
 
 type Context val = [(Name, Expr val)]
@@ -80,8 +80,8 @@ lookupFun [] name = error $ "Invalid function name: " ++ name
 
 evalExpr :: Context val -> [Def val] -> Expr val -> Expr val
 evalExpr c d (Val v) = Val v
-evalExpr ((_, Val x) : (_, Val y) : _) d (ValF a builtinF) = Val $ builtinF [y, x]
-evalExpr ((_, Val x) : (_, Val y) : _) d (ValP a builtinP) = Con (if builtinP [y, x] then "True" else "False") []
+evalExpr c d (ValF a builtinF) = Val $ builtinF (map (\x -> case x of (_, Val v) -> v) $ take a c)
+evalExpr c d (ValP a builtinP) = Con (if builtinP (map (\x -> case x of (_, Val v) -> v) $ take a c) then "True" else "False") []
 evalExpr c d (Var name) = case lookup name c of
                             Just e -> e
                             Nothing -> error $ "Invalid variable name (" ++ name ++ ")"
