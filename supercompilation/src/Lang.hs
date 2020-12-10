@@ -2,61 +2,49 @@ module Lang where
 
 type Name = String
 
-data Term val = Val  { getValue                :: val
+data Term val bf bp
+              = Val  { getValue                :: val
                      }
-              | ValF { getBuiltinFunction      :: [val] -> val
-                     , getArguments            :: [Term val]
+              | ValF { getBuiltinFunction      :: bf
+                     , getArguments            :: [Term val bf bp]
                      }
-              | ValP { getBuiltinPredicate     :: [val] -> Bool
-                     , getArguments            :: [Term val]
+              | ValP { getBuiltinPredicate     :: bp
+                     , getArguments            :: [Term val bf bp]
                      }
               | Var  { getVarName              :: Name
                      }
               | Con  { getConstructor          :: Name
-                     , getConstructorArguments :: [Term val]
+                     , getConstructorArguments :: [Term val bf bp]
                      }
               | Fun  { getFunction             :: Name
                      }
-              | Term val :@  Term val
-              | Name     :-> Term val
-              | Case { getCaseVariable         :: Term val
-                     , getCases                :: PatternMatching val
+              | Term val bf bp  :@  Term val bf bp
+              | Name            :-> Term val bf bp
+              | Case { getCaseVariable         :: Term val bf bp
+                     , getCases                :: PatternMatching val bf bp
                      }
               | Let  { getLetVarName           :: Name
-                     , getLetValue             :: Term val
-                     , getLetBody              :: Term val
-                     }
+                     , getLetValue             :: Term val bf bp
+                     , getLetBody              :: Term val bf bp
+                     } deriving Show
 
 infixr 4 :->
 infixl 6 :@
 
-type PatternMatching val = [PatternMatchingCase val]
+type PatternMatching val bf bp = [PatternMatchingCase val bf bp]
 
-data PatternMatchingCase val = Pattern :=> Term val deriving Show
+data PatternMatchingCase val bf bp = Pattern :=> Term val bf bp deriving Show
 infix 5 :=>
 
 data Pattern = Pat { getPConstructor          :: Name
                    , getPConstructorVariables :: [Name]
                    } deriving Show
 
-data Definition val = Def Name (Term val) deriving Show
+data Definition val bf bp = Def Name (Term val bf bp) deriving Show
 
-data Program val = Program { getPrDefinitions :: [Definition val]
-                           , getPrEntryPoint  :: Name
-                           } deriving Show
+data Program val bf bp = Program { getPrDefinitions :: [Definition val bf bp]
+                                 , getPrEntryPoint  :: Name
+                                 } deriving Show
 
-instance Show a => Show (Term a) where
-  show term = case term of
-      (Val v)       -> '`' : show v
-      (ValF _ args) -> "#func (" ++ showArguments args ++ ")"
-      (ValP _ args) -> "#pred (" ++ showArguments args ++ ")"
-      (Var v)       -> v
-      (Con  c args) -> c ++ " (" ++ showArguments args ++ ")"
-      (Fun f)       -> f
-      (t1 :@ t2)    -> '(' : show t1 ++ ") (" ++ show t2 ++ ")"
-      (x :-> t)     -> '\\' : x ++ " -> " ++ show t
-      (Case t pm)   -> "case " ++ show t ++ " of" ++ foldl (\b a -> b ++ '\t' : show a ++ "\n") "\n" pm
-      (Let x v t)   -> "let " ++ x ++ " = " ++ show v ++ " in " ++ show t
-      where
-          showArguments (arg : args) = foldl (\b a -> b ++ ", " ++ show a) (show arg) args
-          showArguments [] = ""
+type BuiltinFunctionEval val bf = bf -> [val] -> val
+type BuiltinPredicateEval val bp = bp -> [val] -> Bool

@@ -2,20 +2,19 @@ module Eval where
 
 import Lang
 import Data.List
-
 import Control.Applicative
 
-type Context val = [(Name, val)]
+data EvalContext val bf bp = EC [(Name, val)] (BuiltinFunctionEval val bf) (BuiltinPredicateEval val bp)
 
-evalProgram :: Program val -> Context val -> Term val
-evalProgram (Program def entry) args = evalExpr args def (lookupFun def entry)
+evalProgram :: Program val bf bp -> EvalContext val bf bp -> Term val bf bp
+evalProgram (Program def entry) context = evalExpr context def (lookupFun def entry)
 
-lookupFun :: [Definition val] -> Name -> Term val
+lookupFun :: [Definition val bf bp] -> Name -> Term val bf bp
 lookupFun (Def defName expr : def) name | name == defName = expr
                                         | otherwise       = lookupFun def name
 lookupFun [] name = error $ "Invalid function name: " ++ name
 
-getFree :: Term val -> [Name]
+getFree :: Term val bf bp -> [Name]
 getFree term = case term of
     ValF _ args -> args >>= getFree
     ValP _ args -> args >>= getFree
@@ -30,7 +29,7 @@ getFree term = case term of
         getFreePM ((Pat _ args) :=> t) = getFree t \\ args
 
 
-renameToIn :: Name -> Name -> Term val -> Term val
+renameToIn :: Name -> Name -> Term val bf bp -> Term val bf bp
 renameToIn wh to term = case term of
     (Val v)         -> Val v
     (Fun f)         -> Fun f
@@ -43,11 +42,11 @@ renameToIn wh to term = case term of
     (Case e pmc)    -> Case (whRenameToInTo e) (whRenameToInToPM <$> pmc)
     (Let x e t)     -> Let x (whRenameToInTo e) (if x == wh then t else whRenameToInTo t)
     where
-      whRenameToInTo = wh `renameToIn` to
-      whRenameToInToPM (pm@(Pat _ args) :=> t) = pm :=> (if wh `elem` args then t else whRenameToInTo t)
+        whRenameToInTo = wh `renameToIn` to
+        whRenameToInToPM (pm@(Pat _ args) :=> t) = pm :=> (if wh `elem` args then t else whRenameToInTo t)
 
 
-subst :: Term val -> Name -> Term val -> Term val
+subst :: Term val bf bp -> Name -> Term val bf bp -> Term val bf bp
 subst new name expr = case expr of
     Val v       -> Val v
     Fun f       -> Fun f
@@ -65,42 +64,42 @@ subst new name expr = case expr of
         substThis = subst new name
 
         substThisPM (Pat c args :=> t) =
-          let uniArgs = (\(_, n) -> "arg" ++ show n) <$> zip args [1 :: Int .. ]
-              freArgs = (\x -> assertFree x (getFree t)) <$> uniArgs
-          in Pat c freArgs :=> substThis (foldl (\term (wh, to) -> renameToIn wh to term) t (zip args freArgs))
+            let uniArgs = (\(_, n) -> "arg" ++ show n) <$> zip args [1 :: Int .. ]
+                freArgs = (\x -> assertFree x (getFree t)) <$> uniArgs
+            in Pat c freArgs :=> substThis (foldl (\term (wh, to) -> renameToIn wh to term) t (zip args freArgs))
 
 
 
-lookupPM :: Name -> PatternMatching val -> Maybe (PatternMatchingCase val)
+lookupPM :: Name -> PatternMatching val bf bp -> Maybe (PatternMatchingCase val bf bp)
 lookupPM c (pmc@(Pat c' _ :=> _) : pms) | c == c'   = Just pmc
                                         | otherwise = lookupPM c pms
 lookupPM _ _ = Nothing
 
 
-evalExprStep :: Context val -> [Definition val] -> Term val -> Maybe (Term val)
-evalExprStep context defines expression = case expression of
-  ValF f args  -> (ValF f <$> evalArguments args) <|> Just (Val $ f (getValue <$> args))
-  ValP p args  -> (ValP p <$> evalArguments args) <|> Just (Con (show $ p (getValue <$> args)) [])
-  Var v        -> Val <$> lookup v context
-  Fun f        -> Just $ lookupFun defines f
-  ((x:->e):@t) -> Just $ subst t x e
-  (e1:@e2)     -> (:@e2) <$> eval e1
-  (Let x e t)  -> (flip (Let x) t <$> eval e) <|> Just (subst e x t)
-  (Case e pms) -> (flip Case pms <$> eval e) <|>
+evalExprStep :: EvalContext val bf bp -> [Definition val bf bp] -> Term val bf bp -> Maybe (Term val bf bp)
+evalExprStep evalContext@(EC context bfEval bpEval) defines expression = case expression of
+    ValF f args  -> (ValF f <$> evalArguments args) <|> Just (Val $ bfEval f (getValue <$> args))
+    ValP p args  -> (ValP p <$> evalArguments args) <|> Just (Con (show $ bpEval p (getValue <$> args)) [])
+    Var v        -> Val <$> lookup v context
+    Fun f        -> Just $ lookupFun defines f
+    ((x:->e):@t) -> Just $ subst t x e
+    (e1:@e2)     -> (:@e2) <$> eval e1
+    (Let x e t)  -> (flip (Let x) t <$> eval e) <|> Just (subst e x t)
+    (Case e pms) -> (flip Case pms <$> eval e) <|>
                     case e of
-                      Con c args -> case lookupPM c pms of
-                          Just (Pat _ argNames :=> t) ->
-                              Just $ foldl (\term (name, value) -> subst value name term) t (zip argNames args)
-                          Nothing -> error "Invalid pattern-matching"
-                      _ -> Nothing
-  _ -> Nothing
+                        Con c args -> case lookupPM c pms of
+                            Just (Pat _ argNames :=> t) ->
+                                Just $ foldl (\term (name, value) -> subst value name term) t (zip argNames args)
+                            Nothing -> error "Invalid pattern-matching"
+                        _ -> Nothing
+    _ -> Nothing
 
-  where
-      eval = evalExprStep context defines
-      evalArguments (x:xs) = ((:xs) <$> eval x) <|> ((x:) <$> evalArguments xs)
-      evalArguments []     = Nothing
+    where
+        eval = evalExprStep evalContext defines
+        evalArguments (x:xs) = ((:xs) <$> eval x) <|> ((x:) <$> evalArguments xs)
+        evalArguments []     = Nothing
 
 
-evalExpr :: Context val -> [Definition val] -> Term val -> Term val
+evalExpr :: EvalContext val bf bp -> [Definition val bf bp] -> Term val bf bp -> Term val bf bp
 evalExpr context def t = maybe t (evalExpr context def) (evalExprStep context def t)
 

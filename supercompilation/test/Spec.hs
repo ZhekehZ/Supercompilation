@@ -1,6 +1,5 @@
 import TestProgram
 import Eval
-import Lang
 
 main :: IO ()
-main = print $ evalProgram testProgram [("arg0", 3)]
+main = print $ evalProgram testProgram (EC [("arg0", 2)] evalIntF evalIntP)
