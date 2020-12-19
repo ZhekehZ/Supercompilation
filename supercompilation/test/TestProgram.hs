@@ -2,24 +2,25 @@ module TestProgram where
 
 import Lang
 
-data BuiltinF = Plus | Mul 
-    deriving Show
-data BuiltinP = Gt          
-    deriving Show
+data BuiltinF = Plus | Mul
+    deriving (Show, Eq)
+data BuiltinP = Gt
+    deriving (Show, Eq)
 
 type BFE = BuiltinFunctionEval Int BuiltinF
 type BPE = BuiltinPredicateEval Int BuiltinP
 type PROGRAM = Program Int BuiltinF BuiltinP
+type TERM = Term Int BuiltinF BuiltinP
 
 evalIntF :: BFE
-evalIntF bf args = case (bf, args) of 
+evalIntF bf args = case (bf, args) of
   (Plus, [x, y]) -> x + y
   (Mul,  [x, y]) -> x * y
   _  -> error ("Invalid function call: " ++ show bf ++ ", arguments = " ++ show args ++ ")")
-  
+
 evalIntP :: BPE
 evalIntP bp args = case (bp, args) of
-  (Gt,   [x, y]) -> x > y 
+  (Gt,   [x, y]) -> x > y
   _  -> error ("Invalid predicate call: " ++ show bp ++ ", arguments = " ++ show args ++ ")")
 
 testProgram :: PROGRAM
