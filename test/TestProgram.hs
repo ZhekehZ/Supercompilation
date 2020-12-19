@@ -1,6 +1,7 @@
 module TestProgram where
 
 import Lang
+import Utils
 
 data BuiltinF = Plus | Mul
     deriving (Show, Eq)
