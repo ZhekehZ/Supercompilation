@@ -2,6 +2,7 @@ module TestProgram where
 
 import Lang
 import Utils
+import Eval
 
 data BuiltinF = Plus | Mul
     deriving (Show, Eq)
