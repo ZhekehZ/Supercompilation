@@ -1,9 +1,10 @@
-module Eval (EvalContext, evalProgram) where
+module Eval where
 
 import Lang
 import Utils
 import Data.List
 import Control.Applicative
+import Decomposition
 
 data EvalContext val bf bp = EC [(Name, val)] (BuiltinFunctionEval val bf) (BuiltinPredicateEval val bp)
 
@@ -49,27 +50,52 @@ lookupPM _ _ = Nothing
 
 -- Evaluate expression with given context and function definitions
 evalExpr :: EvalContext val bf bp -> [Definition val bf bp] -> Term val bf bp -> Term val bf bp
-evalExpr context def t = maybe t (evalExpr context def) (evalExprStep context def t)
-    where
-      evalExprStep :: EvalContext val bf bp -> [Definition val bf bp] -> Term val bf bp -> Maybe (Term val bf bp)
-      evalExprStep evalContext@(EC context bfEval bpEval) defines expression = case expression of
-          ValF f args  -> (ValF f <$> evalArguments args) <|> Just (Val $ bfEval f (getValue <$> args))
-          ValP p args  -> (ValP p <$> evalArguments args) <|> Just (Con (show $ bpEval p (getValue <$> args)) [])
-          Var v        -> Val <$> lookup v context
-          Fun f        -> Just $ lookupFun defines f
-          ((x:->e):@t) -> Just $ subst t x e
-          (e1:@e2)     -> (:@e2) <$> eval e1
-          (Let x e t)  -> (flip (Let x) t <$> eval e) <|> Just (subst e x t)
-          (Case e pms) -> (flip Case pms <$> eval e) <|>
-                          case e of
-                              Con c args -> case lookupPM c pms of
-                                  Just (Pat _ argNames :=> t) ->
-                                      Just $ foldl (\term (name, value) -> subst value name term) t (zip argNames args)
-                                  Nothing -> error "Invalid pattern-matching"
-                              _ -> Nothing
-          _ -> Nothing
+evalExpr context def t = maybe t (evalExpr context def) (evalExpr1 context def t)
 
-          where
-              eval = evalExprStep evalContext defines
-              evalArguments (x:xs) = ((:xs) <$> eval x) <|> ((x:) <$> evalArguments xs)
-              evalArguments []     = Nothing
+-- Evaluation step
+evalExpr1 :: EvalContext val bf bp -> [Definition val bf bp] -> Term val bf bp -> Maybe (Term val bf bp)
+evalExpr1 evalContext@(EC context bfEval bpEval) defines expression = case expression of
+  ValF f args  -> (ValF f <$> evalArguments args) <|> ((Val . bfEval f) <$> traverse tryGetValue args)
+  ValP p args  -> (ValP p <$> evalArguments args) <|>
+                                            ((flip Con [] . show . bpEval p) <$> traverse tryGetValue args)
+  Var v        -> Val <$> lookup v context
+  Fun f        -> Just $ lookupFun defines f
+  ((x:->e):@t) -> Just $ subst t x e
+  (e1:@e2)     -> (:@e2) <$> eval e1
+  (Let x e t)  -> (flip (Let x) t <$> eval e) <|> Just (subst e x t)
+  (Case e pms) -> (flip Case pms <$> eval e) <|>
+                  case e of
+                      Con c args -> case lookupPM c pms of
+                          Just (Pat _ argNames :=> t) ->
+                              Just $ foldl (\term (name, value) -> subst value name term) t (zip argNames args)
+                          Nothing -> error "Invalid pattern-matching"
+                      _ -> Nothing
+  _            -> Nothing
+  where
+      eval = evalExpr1 evalContext defines
+      evalArguments (x:xs) = ((:xs) <$> eval x) <|> ((x:) <$> evalArguments xs)
+      evalArguments []     = Nothing
+      tryGetValue (Val v) = Just v
+      tryGetValue _ = Nothing
+
+
+type EvalRes val bf bp = Either (Term val bf bp) (Decomposition val bf bp)
+
+-- Performs at least one evaluation step
+evalExpr1p :: EvalContext val bf bp -> [Definition val bf bp] -> Term val bf bp -> EvalRes val bf bp
+evalExpr1p ec defines exp = case exp of
+    (ValF _ _)   -> maybe (Right (Hole, exp)) (Left . steps) (step exp)
+    (ValP _ _)   -> maybe (Right (Hole, exp)) (Left . steps) (step exp)
+    (Var _)      -> Right (Hole, exp)
+    (e1:@e2)     -> case step exp of
+                       Just x  -> Left $ steps x
+                       Nothing -> case self e1 of Right (ctx, term) -> Right $ (ctx :@: e2, term)
+    (Case e pms)  -> case step exp of
+                           Just x' -> Left $ steps x'
+                           Nothing -> case self e of Right (ctx, term) -> Right $ (CCase ctx pms, term)
+    observable      -> Left $ steps observable
+    where
+      self = evalExpr1p ec defines
+      step = evalExpr1 ec defines
+      steps = evalExpr ec defines
+

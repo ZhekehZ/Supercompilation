@@ -1,6 +1,7 @@
 module Utils where
 
 import Lang
+import Decomposition
 import Data.List
 
 type FuncCall val bf bp = (Either Name (Either bf bp), [Term val bf bp])
@@ -55,6 +56,10 @@ showArgs as = case as of
     (a : as) -> foldl (\s a -> s . showString ", " . shows a) (shows a) as
 
 
+isSet :: Eq a => [a] -> Bool
+isSet xs = null $ nub xs \\ xs
+
+
 --------------------------------------------------
 --  Instances
 --------------------------------------------------
@@ -99,4 +104,10 @@ instance (Show val, Show bf, Show bp) => Show (Definition val bf bp) where
 instance (Show val, Show bf, Show bp) => Show (Program val bf bp) where
     showsPrec _ (Program defs entry) = showString ("Program (" ++ entry ++ "):")
             . foldl (\defs def -> defs . showString "\n\t" . shows def) id defs
+
+instance (Show val, Show bf, Show bp) => Show (Context val bf bp) where
+    showsPrec _ c = case c of
+      Hole       -> showString "<.>"
+      c :@: t    -> shows c . showChar ' ' . showsPrec 7 t
+      CCase c cs -> showString "case " . shows c . showString " of { " . showArgs cs . showString " }"
 
