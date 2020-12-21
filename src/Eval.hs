@@ -79,23 +79,23 @@ evalExpr1 evalContext@(EC context bfEval bpEval) defines expression = case expre
       tryGetValue _ = Nothing
 
 
-type EvalRes val bf bp = Either (Term val bf bp) (Decomposition val bf bp)
-
+-- type EvalRes val bf bp = Either (Term val bf bp) (Decomposition val bf bp)
+--
 -- Performs at least one evaluation step
-evalExpr1p :: EvalContext val bf bp -> [Definition val bf bp] -> Term val bf bp -> EvalRes val bf bp
-evalExpr1p ec defines exp = case exp of
-    (ValF _ _)   -> maybe (Right (Hole, exp)) (Left . steps) (step exp)
-    (ValP _ _)   -> maybe (Right (Hole, exp)) (Left . steps) (step exp)
-    (Var _)      -> Right (Hole, exp)
-    (e1:@e2)     -> case step exp of
-                       Just x  -> Left $ steps x
-                       Nothing -> case self e1 of Right (ctx, term) -> Right $ (ctx :@: e2, term)
-    (Case e pms)  -> case step exp of
-                           Just x' -> Left $ steps x'
-                           Nothing -> case self e of Right (ctx, term) -> Right $ (CCase ctx pms, term)
-    observable      -> Left $ steps observable
-    where
-      self = evalExpr1p ec defines
-      step = evalExpr1 ec defines
-      steps = evalExpr ec defines
+-- evalExpr1p :: EvalContext val bf bp -> [Definition val bf bp] -> Term val bf bp -> EvalRes val bf bp
+-- evalExpr1p ec defines exp = case exp of
+--     (ValF _ _)   -> maybe (Right (Hole, exp)) (Left . steps) (step exp)
+--     (ValP _ _)   -> maybe (Right (Hole, exp)) (Left . steps) (step exp)
+--     (Var _)      -> Right (Hole, exp)
+--     (e1:@e2)     -> case step exp of
+--                        Just x  -> Left $ steps x
+--                        Nothing -> case self e1 of Right (ctx, term) -> Right $ (ctx :@: e2, term)
+--     (Case e pms)  -> case step exp of
+--                            Just x' -> Left $ steps x'
+--                            Nothing -> case self e of Right (ctx, term) -> Right $ (CCase ctx pms, term)
+--     observable      -> Left $ steps observable
+--     where
+--       self = evalExpr1p ec defines
+--       step = evalExpr1 ec defines
+--       steps = evalExpr ec defines
 

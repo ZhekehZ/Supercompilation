@@ -50,3 +50,29 @@ testProgram = Program
         ]
     , getPrEntryPoint = "main"
     }
+
+
+testProgram' = Program
+    { getPrDefinitions =
+        [ Def "sum" $ "xs" :-> "a" :->
+            Case (Var "xs")
+            [ Pat "Nil"  []          :=> Var "a"
+            , Pat "Cons" ["x", "xs"] :=> Fun "sum" :@ Var "xs" :@ ValF Plus [Var "x", Var "a"]
+            ]
+
+        , Def "squares" $ "xs" :->
+            Case (Var "xs")
+            [ Pat "Nil"  []          :=> Con "Nil" []
+            , Pat "Cons" ["x", "xs"] :=> Con "Cons" [ValF Mul [Var "x", Var "x"], Fun "squares" :@ Var "xs"]
+            ]
+
+        , Def "upto" $ "m" :-> "n" :->
+            Case (ValP Gt [Var "m", Var "n"])
+            [ Pat "True"   [] :=> Con "Nil" []
+            , Pat "False"  [] :=> Con "Cons" [Var "m", Fun "upto" :@ ValF Plus [Var "m", Con "S" [Con "Z" []]] :@ Var "n"]
+            ]
+
+        , Def "main" $ Fun "sum" :@ (Fun "squares" :@ (Fun "upto" :@ Con "S" [Con "Z" []] :@ Var "arg0")) :@ Con "Z" []
+        ]
+    , getPrEntryPoint = "main"
+    }

@@ -30,3 +30,9 @@ isObservable term = case term of
     (Con _ _) -> True
     (_ :-> _) -> True
     _         -> False
+
+getCaseVariants :: Context val bf bp -> [(Name, Int)]
+getCaseVariants Hole            = []
+getCaseVariants (a :@: b)       = getCaseVariants a
+getCaseVariants (CCase Hole pm) = [(c, length args) | Pat c args :=> t <- pm]
+getCaseVariants (CCase  ctx pm) = getCaseVariants ctx

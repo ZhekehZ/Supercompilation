@@ -20,7 +20,7 @@ funcCallToApp (Right (Right p), args) = ValP p args
 
 -- Get list of free variables
 getFree :: Term val bf bp -> [Name]
-getFree term = case term of
+getFree term = nub $ case term of
     ValF _ args -> args >>= getFree
     ValP _ args -> args >>= getFree
     Con  _ args -> args >>= getFree
@@ -102,7 +102,8 @@ instance (Show val, Show bf, Show bp) => Show (Definition val bf bp) where
     showsPrec _ (Def name term) = showString (name ++ " = ") . shows term
 
 instance (Show val, Show bf, Show bp) => Show (Program val bf bp) where
-    showsPrec _ (Program defs entry) = showString ("Program (" ++ entry ++ "):")
+    showsPrec _ (Program defs entry) = showString ("Program (" ++ entry ++ ", args = ")
+            . showArgs ( concatMap (getFree . (\(Def _ t) -> t)) defs) . showString "):"
             . foldl (\defs def -> defs . showString "\n\t" . shows def) id defs
 
 instance (Show val, Show bf, Show bp) => Show (Context val bf bp) where
