@@ -6,7 +6,7 @@ import Data.List
 import Control.Applicative
 import Decomposition
 
-data EvalContext val bf bp = EC [(Name, val)] (BuiltinFunctionEval val bf) (BuiltinPredicateEval val bp)
+data EvalContext val bf bp = EC [(Name, Term val bf bp)] (BuiltinFunctionEval val bf) (BuiltinPredicateEval val bp)
 
 -- evaluate program in given evaluation context
 evalProgram :: Program val bf bp -> EvalContext val bf bp -> Term val bf bp
@@ -58,7 +58,7 @@ evalExpr1 evalContext@(EC context bfEval bpEval) defines expression = case expre
   ValF f args  -> (ValF f <$> evalArguments args) <|> ((Val . bfEval f) <$> traverse tryGetValue args)
   ValP p args  -> (ValP p <$> evalArguments args) <|>
                                             ((flip Con [] . show . bpEval p) <$> traverse tryGetValue args)
-  Var v        -> Val <$> lookup v context
+  Var v        -> lookup v context
   Fun f        -> Just $ lookupFun defines f
   ((x:->e):@t) -> Just $ subst t x e
   (e1:@e2)     -> (:@e2) <$> eval e1

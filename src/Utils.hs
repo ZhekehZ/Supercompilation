@@ -57,7 +57,7 @@ showArgs as = case as of
 
 
 isSet :: Eq a => [a] -> Bool
-isSet xs = null $ nub xs \\ xs
+isSet xs = null $ xs \\ nub xs
 
 
 --------------------------------------------------
