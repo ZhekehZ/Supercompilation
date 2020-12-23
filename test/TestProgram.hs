@@ -62,7 +62,8 @@ EC d f p <# x = EC (x:d) f p
 testProgram2 :: PROGRAM
 testProgram2 = Program
     { getPrDefinitions =
-        [ Def "match" $ "p" :-> "s" :-> Fun "m1" :@ Var "p" :@ Var "s" :@ Var "p" :@ Var "s"
+        [ Def "main" $ Fun "match" :@ Var "s" :@ Var "p" -- (Con "Cons" [Val 1, Con "Nil" []])
+        , Def "match" $ "s" :-> "p" :-> Fun "m1" :@ Var "p" :@ Var "s" :@ Var "p" :@ Var "s"
         , Def "m1" $ "x" :-> "s" :-> "op" :-> "os" :->
             Case (Var "x")
             [ Pat "Nil"  []          :=> Con "True" []
@@ -80,12 +81,24 @@ testProgram2 = Program
             Case (Var "x")
             [ Pat "Cons" ["s", "ss"] :=> Fun "m1" :@ Var "p" :@ Var "ss" :@ Var "p" :@ Var "ss"
             ]
-        , Def "simpleMatch" $ Fun "match" :@ Var "p" :@ Var "s"
         ]
-    , getPrEntryPoint = "simpleMatch"
+    , getPrEntryPoint = "main"
     }
 
 
 listToTerm :: [Int] -> TERM
 listToTerm []       = Con "Nil" []
 listToTerm (x : xs) = Con "Cons" [Val x, listToTerm xs]
+
+fun1 :: [Int] -> [Int] -> Bool
+fun1 = \p -> \s -> case p of
+            [] -> True
+            arg1':arg2' -> case s of
+                [] -> False
+                arg1:arg2 -> case arg1 == arg1' of
+                    True -> fun1 arg2' arg2
+                    False -> case s of
+                            arg1:arg2' -> fun1 p arg2'
+
+
+compile args prog = compileTree (buildProgramTree (foldl (<#) emptyContext args) prog)

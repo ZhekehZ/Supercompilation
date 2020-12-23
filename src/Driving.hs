@@ -32,16 +32,21 @@ pSet x pt = pt {getCurrent = x}
 pSetChildren :: [Tree x] -> ProcessTree x -> ProcessTree x
 pSetChildren ns (PTree x l r p) = PTree x [] ns p
 
-pParent :: ProcessTree x -> Maybe (ProcessTree x)
+pParent :: ProcessTree x -> Maybe (ProcessTree x, Int)
 pParent (PTree x l r []) = Nothing
-pParent (PTree x l r ((p, pl, pr) : ps)) = Just $ PTree p pl (Branch x (l ++ r) : pr) ps
+pParent (PTree x l r ((p, pl, pr) : ps)) = Just $ (PTree p pl (Branch x (l ++ r) : pr) ps, length l)
 
-pParentN :: ProcessTree x -> Int -> Maybe (ProcessTree x)
-pParentN node 0 = Just node
-pParentN node n = maybe Nothing (flip pParentN (n - 1)) (pParent node)
+pChild :: ProcessTree x -> Int -> ProcessTree x
+pChild (PTree p pl (Branch x l_r : pr) ps) i = PTree x (take i l_r) (drop i l_r) ((p, pl, pr) : ps)
+
+pParentN :: ProcessTree x -> Int -> Maybe (ProcessTree x, [Int])
+pParentN = pParentN' []
+    where
+    pParentN' acc node 0 = Just (node, acc)
+    pParentN' acc node n = maybe Nothing (\(parent, index) -> pParentN' (index:acc) parent (n - 1)) (pParent node)
 
 pToTree :: ProcessTree x -> Tree x
-pToTree pt@(PTree x l r _) = maybe (Branch x (l ++ r)) pToTree (pParent pt)
+pToTree pt@(PTree x l r _) = maybe (Branch x (l ++ r)) pToTree (fst <$> pParent pt)
 
 data Meta val bf bp = MetaUp Int (Substitution (Term val bf bp))
                     | MetaSplit (Term val bf bp) [(Name, [Name])]
@@ -60,15 +65,16 @@ buildTreeStep :: (Show val, Show bf, Show bp, Eq val, Eq bf, Eq bp) => EvalConte
 buildTreeStep ec defs ptree =
         if isObservable e
             then nextOrThis $ pSetChildren [] ptree
-            else case getRenaming of
-                Just (i, (q, w, x)) ->
-                        let newTree = pSetChildren [] $ pSet (Node e (Just $ MetaUp i x)) ptree
+            else case renaming of
+                Just (i, term, parent, path, _, _, subs) ->
+                        let newParent = pSet (Node term (Just $ MetaFun (getFree term))) parent
+                            newNode = applyPath path $ newParent
+                            newTree = pSetChildren [] $ pSet (Node e (Just $ MetaUp i subs)) newNode
                         in maybe (Left newTree) Right (pNext newTree)
-                Nothing -> case getCoupling of
-                    Just (i, _, (t, s, s2)) ->
+                Nothing -> case coupling of
+                    Just (_, _, parent, _, t, s, _) ->
                         let newTerm = foldr (\(x := t) e -> Let x t e) t s
-                            children = (flip Branch []) . flip Node Nothing <$> (range s ++ [t])
-                            Just parent = pParentN ptree i
+                            children = flip Branch [] <$> ((flip Node Nothing <$> range s) ++ [Node t (Just $ MetaFun (getFree t))])
                             newTree = pSetChildren children $ pSet (Node newTerm (Just MetaLet)) parent
                         in maybe (Left newTree) Right (pNext newTree)
                     Nothing -> case evalExpr1 ec defs e of
@@ -78,20 +84,29 @@ buildTreeStep ec defs ptree =
                                        cases = getCaseVariants ctx
                                        meta = case cases of { [] -> Nothing; _ -> Just (MetaSplit term cases) }
                                        splitNode = pSet (Node e meta) ptree
-                                       getNames n = take n ["arg" ++ show i | i <- [1..]] \\ getFree e
+                                       getNames n = take n ["a" ++ show i | i <- [1..]] \\ getFree e
                                        casesImpl = uncurry Con . fmap (fmap Var) <$> cases
                                        children = flip Branch [] . flip Node Nothing . fillHole ctx <$> casesImpl
                                        newTree = pSetChildren children splitNode
                                    in maybe (Left newTree) Right (pNext newTree)
     where
+        iToTerm = getTerm . getCurrent
         nextOrThis = maybe (Left ptree) Right . pNext
-        e = getTerm $ getCurrent ptree
-        memoized = zip [1..] $ (\(x, _, _) -> getTerm x) <$> getParents ptree
-        geners = fmap (>*< e) <$> memoized
-        getRenaming = find (\(i, (_, x, _)) -> null x) geners
-        getCoupling = case [(i, e', gen) | ((i, e'), (_, gen)) <- zip memoized geners, e' <|.. e] of
-                            x : _ -> Just x
-                            _     -> Nothing
+        e = iToTerm ptree
+
+        memo = [(i, term, iter, path, gener, subs1, subs2)
+               | i <- [1 .. length (getParents ptree)]
+               , let Just (iter, path) = pParentN ptree i
+               , let term = iToTerm iter
+               , let (gener, subs1, subs2) = term >*< iToTerm ptree
+               ]
+
+        renaming = find (\(_, _, _, _, _, subs1, _) -> null subs1) memo
+        coupling = find (\(_, e', _, _, _, _, _) -> e' <|.. e) memo
+
+--         applyPath :: [Int] -> ProcessTree (Node val bf bp) -> ProcessTree (Node val bf bp)
+        applyPath []     node = node
+        applyPath (x:xs) node = applyPath xs $ pChild node x
 
 
 buildProgramTree ec (Program defs entry) = pToTree $ buildTree ec defs (PTree (Node (lookupFun defs entry) Nothing) [] [] [])
@@ -117,3 +132,15 @@ let v = 1 in let v' = 0 in sum (squares (upto v arg0)) v'
 
 
 -}
+
+
+tt = Branch 1
+     [ Branch 2
+       [ Branch 3 []
+       , Branch 4 []
+       ]
+     , Branch 5
+       [ Branch 6 []
+       , Branch 7 []
+       ]
+     ]

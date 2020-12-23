@@ -33,13 +33,13 @@ subst new name expr = case expr of
     Case e pmc  -> Case (substThis e) (substThisPM <$> pmc)
     where
         freeInNew = getFree new
-        assertFree x free = if x `elem` freeInNew || x `elem` free then assertFree (x ++ "'") free else x
         substThis = subst new name
+        assertFree x free = if x `elem` freeInNew || x `elem` free then assertFree (x ++ "'") free else x
 
-        substThisPM (Pat c args :=> t) =
-            let uniArgs = (\(_, n) -> "arg" ++ show n) <$> zip args [1 :: Int .. ]
+        substThisPM pat@(Pat c args :=> t) = if any (== name) args then pat else
+            let uniArgs = (\(_, n) -> "ar" ++ show n) <$> zip args [1 :: Int .. ]
                 freArgs = (\x -> assertFree x (getFree t)) <$> uniArgs
-            in Pat c freArgs :=> substThis (foldl (\term (wh, to) -> renameToIn wh to term) t (zip args freArgs))
+            in Pat c freArgs :=> substThis (foldl (\term (wh, to) -> subst (Var to) wh term) t (zip args freArgs))
 
 
 -- Find pattern-matching case by contructor name
@@ -99,3 +99,18 @@ evalExpr1 evalContext@(EC context bfEval bpEval) defines expression = case expre
 --       step = evalExpr1 ec defines
 --       steps = evalExpr ec defines
 
+evalExprN :: EvalContext val bf bp -> [Definition val bf bp] -> Term val bf bp -> Int -> Maybe (Term val bf bp)
+evalExprN ec defs t 0 = Just t
+evalExprN ec defs t n = case evalExpr1 ec defs t of
+                            Just t  -> evalExprN ec defs t (n - 1)
+                            Nothing -> Nothing
+{-
+    fun1 :: [Int] -> [Int] -> Bool
+    fun1 = \p -> \s -> case p of
+                [] -> True
+                arg1':arg2' -> case s of
+                    [] -> False
+                    arg1:arg2 -> case arg1 == arg1' of
+                        True -> fun1 arg2' arg2
+                        False -> fun1 p arg2
+-}
