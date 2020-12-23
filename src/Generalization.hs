@@ -8,9 +8,9 @@ import Data.List
 import Data.Bool
 import Control.Applicative
 
-
 data SingleSub term = Name := term deriving Show
 type Substitution term = [SingleSub term]
+
 type Generalization term = (term, Substitution term, Substitution term)
 
 domain :: Substitution term -> [Name]
@@ -31,7 +31,7 @@ a >*<. b = case (appAsFuncCall a, appAsFuncCall b) of
                                                     (args, subs1) -> case uniteSubsts args subs2 of
                                                       (args, subs2) -> (funcCallToApp (h, args), subs1, subs2)
     _                                        -> let frees = getFree (a :@ b)
-                                                    v = head $ filter (`notElem` frees) $ ["var" ++ show i | i <- [1..]]
+                                                    v = head $ filter (`notElem` frees) ['v' : show i | i <- [1..]]
                                                 in (Var v, [v := a], [v := b])
     where
       uniteSubsts :: [Term val bf bp] -> [Substitution (Term val bf bp)]
@@ -73,7 +73,7 @@ subExprRule (term, s1, s2) = case applySubs term (toMap s1) (toMap s2) of
                                                 let s1 = take (i - 1) subs1 ++ ((e , n1) : drop i subs1)
                                                 let s2 = take (j - 1) subs2 ++ ((e', n2) : drop j subs2)
                                                 return (term, s1, s2)
-                                         in case allCombinations of { [] -> Nothing; x : _ -> Just x }
+                                         in listToMaybe allCombinations
 
         applySubs t s1 s2 = fromMaybe (t, s1, s2) (applySubsStep t s1 s2)
 
@@ -81,10 +81,7 @@ subExprRule (term, s1, s2) = case applySubs term (toMap s1) (toMap s2) of
 
 
 assertDomainIsCoorect :: Substitution term -> Substitution term
-assertDomainIsCoorect subs = case isSet $ domain subs of
-                            True -> subs
-                            False -> error "Invalid substitution format"
-
+assertDomainIsCoorect subs = if isSet $ domain subs then subs else error "Invalid substitution format"
 
 isRenaming :: (Eq val, Eq bf, Eq bp) => Substitution (Term val bf bp) -> Bool
 isRenaming x = let rng = range $ assertDomainIsCoorect x
@@ -99,15 +96,10 @@ simplifyRenaming g@(e, s1, s2) = if isRenaming s1
         then (e, [], [x := e | (x' := e) <- s2, let x = getVarName (findByDomain x' s1)])
         else g
     where
-        findByDomain :: Name -> Substitution term -> term
         findByDomain name = (\(Just (_ := x)) -> x) . find (\(x := _) -> x == name)
 
-
-simplifyRenaming' :: (Eq val, Eq bf, Eq bp) => Generalization (Term val bf bp) -> Generalization (Term val bf bp)
-simplifyRenaming' g@(e, s1, s2) = (e, filter (\(x := y) -> case y of { Var x' -> x /= x'; _ -> False }) s1, s2)
-
 -- Сlosest generalization operator
-(>*<) :: (Show val, Show bf, Show bp, Eq val, Eq bf, Eq bp) => Term val bf bp -> Term val bf bp -> Generalization (Term val bf bp)
+(>*<) :: (Eq val, Eq bf, Eq bp) => Term val bf bp -> Term val bf bp -> Generalization (Term val bf bp)
 t1 >*< t2 = simplifyRenaming $ subExprRule (t1 >*<. t2)
 
 

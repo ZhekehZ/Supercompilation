@@ -3,6 +3,7 @@ module Utils where
 import Lang
 import Decomposition
 import Data.List
+import ProcessTree
 
 type FuncCall val bf bp = (Either Name (Either bf bp), [Term val bf bp])
 
@@ -34,6 +35,11 @@ getFree term = nub $ case term of
         getFreePM ((Pat _ args) :=> t) = getFree t \\ args
 
 
+lookupFun :: [Definition val bf bp] -> Name -> Term val bf bp
+lookupFun (Def defName expr : def) name | name == defName = expr
+                                        | otherwise       = lookupFun def name
+lookupFun [] name = error $ "Invalid function name: " ++ name
+
 -- Rename variable `wh` to `to` in the term `term`
 renameToIn :: Name -> Name -> Term val bf bp -> Term val bf bp
 renameToIn wh to term = if wh == to then term else case term of
@@ -55,14 +61,22 @@ showArgs as = case as of
     []       -> id
     (a : as) -> foldl (\s a -> s . showString ", " . shows a) (shows a) as
 
-
 isSet :: Eq a => [a] -> Bool
 isSet xs = null $ xs \\ nub xs
 
 
---------------------------------------------------
---  Instances
---------------------------------------------------
+
+
+
+
+-----------------------------------------------------------------------
+----------------------------   INSTANCES   ----------------------------
+-----------------------------------------------------------------------
+
+newtype RawString = RawString String
+
+instance Show RawString where
+    showsPrec p (RawString s) = showString s
 
 instance (Show val, Show bf, Show bp) => Show (Term val bf bp) where
     showsPrec p t = case t of
@@ -71,14 +85,15 @@ instance (Show val, Show bf, Show bp) => Show (Term val bf bp) where
         Fun v     -> showString v
         ValF f as -> shows f . showParen True (showArgs as)
         ValP f as -> shows f . showParen True (showArgs as)
-        Con  f as -> showString f . showParen True (showArgs as)
+        Con  f as -> showString f . if null as then id else showParen True (showArgs as)
         a :@ b    -> showParen (p > 6) $ showsPrec 6 a . showChar ' ' . showsPrec 7 b
         a :-> b   -> showParen (p > 0) $ showString ('\\' : a ++ " -> ") . shows b
         Case e cs -> showString "case " . shows e . showString " of { " . showArgs cs . showString " }"
         Let x e e' -> showParen (p > 0) $ showString ("let " ++ x ++ " = ") . shows e . showString " in " . shows e'
 
 instance (Show val, Show bf, Show bp) => Show (PatternMatchingCase val bf bp) where
-    showsPrec _ (Pat c args :=> term) = showString c . showParen True (showArgs args) . showString " => " . shows term
+    showsPrec _ (Pat c args :=> term) = showString c . (if null args then id
+                                else showParen True (showArgs (RawString <$> args))) . showString " => " . shows term
 
 instance (Eq val, Eq bf, Eq bp) => Eq (Term val bf bp) where
     Val x == Val x' = x == x'
@@ -97,7 +112,6 @@ instance (Eq val, Eq bf, Eq bp) => Eq (PatternMatchingCase val bf bp) where
     (Pat c args :=> t) == (Pat c' args' :=> t') = (c == c')
             && (t == foldl (\t' (a', a) -> renameToIn a' a t') t' (zip args' args))
 
-
 instance (Show val, Show bf, Show bp) => Show (Definition val bf bp) where
     showsPrec _ (Def name term) = showString (name ++ " = ") . shows term
 
@@ -112,3 +126,7 @@ instance (Show val, Show bf, Show bp) => Show (Context val bf bp) where
       c :@: t    -> shows c . showChar ' ' . showsPrec 7 t
       CCase c cs -> showString "case " . shows c . showString " of { " . showArgs cs . showString " }"
 
+
+instance Show x => Show (Tree x) where
+  showsPrec p (Branch x xs) = showString (take (p * 2) $ repeat ' ') . shows x
+                    . foldl (\pr x -> pr . showChar '\n' . showsPrec (p + 1) x) id xs
