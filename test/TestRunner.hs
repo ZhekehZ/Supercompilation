@@ -15,6 +15,10 @@ main = do
         print program
         putStrLn ""
 
+        putStrLn "SC without arguments:"
+        print $ compile program []
+        putStrLn ""
+
         for_ (zip [1..] tests) $ \(index, (scArgs, runArgs, expected)) -> do
             putStrLn ("#> Test " ++ show index) 
             putStrLn "   SuperCompilation arguments:"

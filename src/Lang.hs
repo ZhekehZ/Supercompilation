@@ -1,9 +1,5 @@
 module Lang where
 
---------------------------------------------------
---  Language DSL
---------------------------------------------------
-
 type Name = String
 
 data Term val bf bp
