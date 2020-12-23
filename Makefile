@@ -1,7 +1,12 @@
+all: tests clean
+
+int:
+	ghci test/TestRunner.hs -i src/*.hs test/*Prog*.hs
 
 tests: 
-    mkdir -p build
-    ghc test/TestRunner.hs -i src/*.hs test/*Prog*.hs -odir build
+	mkdir -p build
+	ghc test/TestRunner.hs -i src/*.hs test/*Prog*.hs -outputdir build -o runTests && ./runTests
 
 clean: 
-    rm -r build
+	rm -rf build
+	rm -rf runTests
