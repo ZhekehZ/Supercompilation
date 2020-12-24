@@ -1,5 +1,8 @@
 module ProcessTree where
 
+import Lang
+
+
 -- Multiway tree
 data Tree x = Branch x [Tree x]
 

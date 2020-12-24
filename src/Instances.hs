@@ -45,11 +45,6 @@ instance (Show val, Show bf, Show bp) => Show (Context val bf bp) where
       c :@: t    -> shows c . showChar ' ' . showsPrec 7 t
       CCase c cs -> showString "case " . shows c . showString " of { " . showArgs cs . showString " }"
 
-
-instance Show x => Show (Tree x) where
-  showsPrec p (Branch x xs) = showString (take (p * 2) $ repeat ' ') . shows x
-                    . foldl (\pr x -> pr . showChar '\n' . showsPrec (p + 1) x) id xs
-
 instance (Eq val, Eq bf, Eq bp) => Eq (Term val bf bp) where
     Val x == Val x' = x == x'
     Var x == Var x' = x == x'
@@ -67,7 +62,3 @@ instance (Eq val, Eq bf, Eq bp) => Eq (Term val bf bp) where
 instance (Eq val, Eq bf, Eq bp) => Eq (PatternMatchingCase val bf bp) where
     (Pat c args :=> t) == (Pat c' args' :=> t') = (c == c')
             && (t == foldl (\t' (a', a) -> subst (Var a) a' t') t' (zip args' args))
-
-
--- instance (Show val, Show bf, Show vbp) => Show (Node (Term val bf bp)) where
---     showsPrec _ x = show x 

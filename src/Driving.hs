@@ -18,8 +18,7 @@ data Meta val bf bp = Regular
 
 data Node val bf bp = Node { getTerm    :: Term val bf bp
                            , getMeta    :: Meta val bf bp
-                           } deriving Show
-
+                           }
 
 buildTreeStep :: (Eq val, Eq bf, Eq bp) =>
     EvalContext val bf bp -> [Definition val bf bp] -> TreeIterator (Node val bf bp) ->
@@ -81,3 +80,14 @@ buildProgramTreeN ec (Program defs entry) n = pToTree $ buildTreeN ec defs (PTre
         buildTreeN dc defs ptree 0 = ptree
         buildTreeN dc defs ptree n = case buildTreeStep dc defs ptree of Left x -> x
                                                                          Right x -> buildTreeN dc defs x (n - 1)
+
+
+
+instance Show x => Show (Tree x) where
+    showsPrec p (Branch x xs) = showString (take (p * 2) $ repeat ' ') . showsPrec p x
+                    . foldl (\pr x -> pr . showChar '\n' . showsPrec (p + 1) x) id xs
+
+instance (Show val, Show bf, Show bp) => Show (Node val bf bp) where
+    showsPrec p (Node term meta) = let offset = take (p * 2) $ repeat ' '
+                                   in showString ("| Node\n" ++ offset ++ "| TERM = ") . shows term 
+                                      . showString ("\n" ++ offset ++ "| META = ") . shows meta

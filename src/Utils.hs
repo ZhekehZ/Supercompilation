@@ -3,7 +3,6 @@ module Utils where
 import Lang
 import Decomposition
 import Data.List
-import ProcessTree
 
 type FuncCall val bf bp = (Either Name (Either bf bp), [Term val bf bp])
 
