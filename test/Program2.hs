@@ -44,6 +44,11 @@ prog2Tests = [
         , true                       :: EXPECTED
         )
         ,
+        ( []  
+        , [  ("p", strToTerm "ABBB"), ("s", strToTerm "BBBABBABCBB") ]
+        , true                          
+        )
+        ,
         ( [ ("p", strToTerm "ABB") ] 
         , [ ("s", strToTerm "ABC") ] 
         , false                          
@@ -57,11 +62,6 @@ prog2Tests = [
         ( [ ("p", strToTerm "CA") ] 
         , [ ("s", strToTerm "ABBAAB") ] 
         , false                          
-        )
-        ,
-        ( [ ("p", strToTerm "AC") ]  
-        , [ ("s", strToTerm "ABC") ]
-        , true                          
         )
         ,
         ( [ ("s", strToTerm "ABC") ]   -- ~~Slow~~
