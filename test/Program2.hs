@@ -16,7 +16,7 @@ program2 = Program
         , Def "m2" $ "x" :-> "p" :-> "pp" :-> "op" :-> "os" :->
             Case (Var "x")
             [ Pat "Nil"  []          :=> Con "False" []
-            , Pat "Cons" ["s", "ss"] :=> Case (ValP Eql [Var "s", Var "p"])
+            , Pat "Cons" ["s", "ss"] :=> Case (Fun "cmp" :@ Var "s" :@ Var "p")
                                          [ Pat "True"  [] :=> Fun "m1" :@ Var "pp" :@ Var "ss" :@ Var "op" :@ Var "os"
                                          , Pat "False" [] :=> Fun "next" :@ Var "os" :@ Var "op"
                                          ]
@@ -26,6 +26,12 @@ program2 = Program
             [ Pat "Nil" [] :=> Var "x"
             , Pat "Cons" ["s", "ss"] :=> Fun "m1" :@ Var "p" :@ Var "ss" :@ Var "p" :@ Var "ss"
             ]
+        , Def "cmp" $ "x" :-> "y" :-> 
+            Case (Var "x")
+            [ Pat "A" [] :=> Case (Var "y") [ Pat "A" [] :=> Con "True" [], Pat "B" [] :=> Con "False" [], Pat "C" [] :=> Con "False" []]
+            , Pat "B" [] :=> Case (Var "y") [ Pat "A" [] :=> Con "False" [], Pat "B" [] :=> Con "True" [], Pat "C" [] :=> Con "False" []]
+            , Pat "C" [] :=> Case (Var "y") [ Pat "A" [] :=> Con "False" [], Pat "B" [] :=> Con "False" [], Pat "C" [] :=> Con "True" []]
+            ]
         ]
     , getPrEntryPoint = "main"
     }
@@ -33,39 +39,39 @@ program2 = Program
 
 prog2Tests :: TESTCASES
 prog2Tests = [
-        ( [ ("p", listToTerm [1,2,3]) ] :: COMPILEARGUMENTS
-        , [ ("s", listToTerm [1,2,3]) ] :: EVALARGUMENTS
-        , true                          :: EXPECTED
+        ( [ ("p", strToTerm "ABC") ] :: COMPILEARGUMENTS
+        , [ ("s", strToTerm "ABC") ] :: EVALARGUMENTS
+        , true                       :: EXPECTED
         )
         ,
-        ( [ ("p", listToTerm [1,2,4]) ] 
-        , [ ("s", listToTerm [1,2,3]) ] 
+        ( [ ("p", strToTerm "ABB") ] 
+        , [ ("s", strToTerm "ABC") ] 
         , false                          
         )
         ,
-        ( [ ("p", listToTerm [3,4]) ] 
-        , [ ("s", listToTerm [0,1,2,3,4,6]) ] 
+        ( [ ("p", strToTerm "AB") ] 
+        , [ ("s", strToTerm "CCCABCCC") ] 
         , true                          
         )
         ,
-        ( [ ("p", listToTerm [4, 0]) ] 
-        , [ ("s", listToTerm [0,1,2,3,4,6]) ] 
+        ( [ ("p", strToTerm "CA") ] 
+        , [ ("s", strToTerm "ABBAAB") ] 
         , false                          
         )
         ,
-        ( [ ("s", listToTerm [1,2,3]) ]  
-        , [ ("p", listToTerm [1,2,4]) ]
-        , false                          
-        )
-        ,
-        ( [ ("s", listToTerm [0,3,4]) ]  
-        , [ ("p", listToTerm [3,4]) ]
+        ( [ ("p", strToTerm "AC") ]  
+        , [ ("s", strToTerm "ABC") ]
         , true                          
         )
         ,
-        ( [ ("s", listToTerm [0,1,2]) ]  
-        , [ ("p", listToTerm [4, 0]) ]
+        ( [ ("s", strToTerm "ABC") ]   -- ~~Slow~~
+        , [ ("p", strToTerm "ABB") ]
         , false                          
+        )
+        ,
+        ( []  
+        , [  ("p", strToTerm "AC"), ("s", strToTerm "BBBABBABCBB") ]
+        , true                          
         )
     ]
     where true = Con "True" []

@@ -4,6 +4,7 @@ import Lang
 import Utils
 import Eval
 import Driving
+import ProcessTree
 import CodeGeneration
 import Generalization
 
@@ -31,9 +32,13 @@ evalIntP bp args = case (bp, args) of
 
 context = EC evalIntF evalIntP
 
-listToTerm :: [Int] -> TERM
+listToTerm :: [String] -> TERM
 listToTerm []       = Con "Nil" []
-listToTerm (x : xs) = Con "Cons" [Val x, listToTerm xs]
+listToTerm (x : xs) = Con "Cons" [Con x [], listToTerm xs]
+
+
+strToTerm :: String -> TERM
+strToTerm = listToTerm . map (:[])
 
 applyDefaults :: PROGRAM -> [(Name, TERM)] -> PROGRAM
 applyDefaults (Program defs entry) defaults = 
@@ -41,9 +46,9 @@ applyDefaults (Program defs entry) defaults =
         newDefs = (\(Def name term) -> Def name $ doSubs term) <$> defs
     in Program newDefs entry
 
--- evalEntry :: PROGRAM -> PROGRAM
--- evalEntry prog@(Program defs entry) = let others = filter (\(Def name _) -> name /= entry) defs
---                                       in Program (Def entry (eval prog []) : others) entry
+evalEntry :: PROGRAM -> PROGRAM
+evalEntry prog@(Program defs entry) = let others = filter (\(Def name _) -> name /= entry) defs
+                                      in Program (Def entry (eval prog []) : others) entry
 
 -- SuperCompilation
 compile :: PROGRAM -> [(Name, TERM)] -> PROGRAM
@@ -53,6 +58,11 @@ compile prog defaults =  compileTree (buildProgramTree context $ applyDefaults p
 eval :: PROGRAM -> [(Name, TERM)] -> TERM
 eval prog defaults = evalProgram (applyDefaults prog defaults) context
 
+tree :: PROGRAM -> [(Name, TERM)] -> Tree (Node Int BuiltinF BuiltinP)
+tree prog defaults = buildProgramTree (EC evalIntF evalIntP) (applyDefaults prog defaults)
+
+treeN :: PROGRAM -> [(Name, TERM)] -> Int -> Tree (Node Int BuiltinF BuiltinP)
+treeN prog defaults = buildProgramTreeN (EC evalIntF evalIntP) (applyDefaults prog defaults)
 
 type COMPILEARGUMENTS = [(Name, TERM)]
 type EVALARGUMENTS = [(Name, TERM)]

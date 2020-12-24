@@ -7,6 +7,7 @@ import Data.Maybe
 import Data.List
 import Data.Bool
 import Control.Applicative
+import Instances
 
 data SingleSub term = Name := term deriving Show
 type Substitution term = [SingleSub term]
@@ -27,29 +28,27 @@ applySubstitution subs term = foldl (\term (x := e) -> subst e x term) term subs
 v >*<. v'@(Var _) | v == v' = (v, [], [])
 a >*<. b = case (appAsFuncCall a, appAsFuncCall b) of
     (Just (h, xs), Just (h', xs')) | h == h' -> let (args, subs1, subs2) = unzip3 (uncurry (>*<.) <$> zip xs xs')
-                                                in case uniteSubsts args subs1 of
-                                                    (args, subs1) -> case uniteSubsts args subs2 of
-                                                      (args, subs2) -> (funcCallToApp (h, args), subs1, subs2)
+                                                in case uniteSubsts args subs1 subs2 of
+                                                    (args, sub1, sub2) -> (funcCallToApp (h, args), sub1, sub2)
     _                                        -> let frees = getFree (a :@ b)
                                                     v = head $ filter (`notElem` frees) ['v' : show i | i <- [1..]]
                                                 in (Var v, [v := a], [v := b])
     where
-      uniteSubsts :: [Term val bf bp] -> [Substitution (Term val bf bp)]
-                        -> ([Term val bf bp], Substitution (Term val bf bp))
-      uniteSubsts args listOfSubs = foldl (\(args, resSubs) (arg, subs) ->
-                                              case addAllSubst (funcCallToApp (Left "_", args)) arg subs of
-                                                (arg, subs) -> (args ++ [arg], resSubs ++ subs)
-                                          ) ([], []) (zip args listOfSubs)
+      getAllVariables s = domain s ++ concatMap getFree (range s)
 
-      addAllSubst :: Term val bf bp -> Term val bf bp -> Substitution (Term val bf bp)
-                            -> (Term val bf bp, Substitution (Term val bf bp))
-      addAllSubst pCall newArg =
-            foldl (\(newArg, subs) sub -> ((subs ++) . (:[])) <$> addSubst pCall newArg sub) (newArg, [])
-
-      addSubst :: Term val bf bp -> Term val bf bp -> SingleSub (Term val bf bp)
-                                    -> (Term val bf bp, SingleSub (Term val bf bp))
-      addSubst pCall newArg (x := e) = let x' = foldl (\l n -> bool l (l ++ "'") (l == n)) x (getFree pCall)
-                                       in (renameToIn x x' newArg, x' := renameToIn x x' e)
+      uniteSubsts :: [Term val bf bp] -> [Substitution (Term val bf bp)]  -> [Substitution (Term val bf bp)] -> ([Term val bf bp], Substitution (Term val bf bp), Substitution (Term val bf bp))
+      uniteSubsts args subs1 subs2 = foldr (\((s1, s2), (arg, index)) (resArgs, resS1, resS2) -> 
+              let frees = getFree arg `intersect` (domain s1 ++ domain s2)
+                  banned = frees ++ (getAllVariables $ s1 ++ s2 ++ resS1 ++ resS2)
+                  newFrees = take (length frees) $ filter (`notElem` banned) ["arg" ++ show index ++ "_" ++ show i | i <- [1..]]
+                  renaming = zip frees newFrees
+                  getNewSubs = foldr (\(x := y) s -> case lookup x renaming of 
+                                                            Just x' -> (x' := subst (Var x') x y) : s
+                                                            Nothing -> (x := y) : s) [] 
+                  (newS1, newS2) = (getNewSubs s1, getNewSubs s2)
+                  newArg = foldr (\(from, to) -> subst (Var to) from) arg renaming
+              in (newArg : resArgs, newS1 ++ resS1, newS2 ++ resS2)
+            ) ([], [], []) (zip (zip subs1 subs2) (zip args [1..]))
 
 
 -- General subexpression rule
@@ -62,7 +61,7 @@ subExprRule (term, s1, s2) = case applySubs term (toMap s1) (toMap s2) of
                             <$> groupBy (\(_ := e) (_ := e') -> e == e') subs
 
         merge e vs vs' = case vs `intersect` vs' of
-                          x : y : _ -> let (ne, nvs, nvs') = (renameToIn x y e, delete x vs, delete x vs')
+                          x : y : _ -> let (ne, nvs, nvs') = (subst (Var y) x e, delete x vs, delete x vs')
                                        in (merge ne nvs nvs') <|> Just (ne, nvs, nvs')
                           _         -> Nothing
 
@@ -93,10 +92,13 @@ isRenaming x = let rng = range $ assertDomainIsCoorect x
 
 simplifyRenaming :: (Eq val, Eq bf, Eq bp) => Generalization (Term val bf bp) -> Generalization (Term val bf bp)
 simplifyRenaming g@(e, s1, s2) = if isRenaming s1
-        then (e, [], [x := e | (x' := e) <- s2, let x = getVarName (findByDomain x' s1)])
+        then let (e', s2') = foldr (\(x := e) (term, s2) -> 
+                                      let Just (_ := Var x') = find (\(z := _) -> z == x) s1 
+                                      in (subst (Var x') x term, (x' := e) : s2)
+                                    ) (e, []) s2 
+          
+             in (e', [], s2')
         else g
-    where
-        findByDomain name = (\(Just (_ := x)) -> x) . find (\(x := _) -> x == name)
 
 -- Сlosest generalization operator
 (>*<) :: (Eq val, Eq bf, Eq bp) => Term val bf bp -> Term val bf bp -> Generalization (Term val bf bp)

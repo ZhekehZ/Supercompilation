@@ -25,9 +25,9 @@ buildTreeStep :: (Eq val, Eq bf, Eq bp) =>
     EvalContext val bf bp -> [Definition val bf bp] -> TreeIterator (Node val bf bp) ->
                                 Either (TreeIterator (Node val bf bp)) (TreeIterator (Node val bf bp))
 buildTreeStep ec defs ptree =
-        if isObservable e
-            then nextOrThis $ pSetChildren [] ptree
-            else case renaming of
+        case evalExpr ec defs e of 
+            x | isObservable x -> let Just newTree = pNext $ pSetChildren [Branch (Node x Regular) []] $ ptree in maybe (Left newTree) Right (pNext newTree)
+            _                  -> case renaming of
                 Just (i, term, parent, path, _, _, subs) ->
                         let newParent = pSet (Node term (MetaFun (getFree term))) parent
                             newNode = applyPath path $ newParent
@@ -73,3 +73,11 @@ buildTreeStep ec defs ptree =
 buildProgramTree ec (Program defs entry) = pToTree $ buildTree ec defs (PTree (Node (lookupFun defs entry) Regular) [] [] [])
     where
         buildTree dc defs ptree = either id (buildTree dc defs) (buildTreeStep dc defs ptree)
+
+
+
+buildProgramTreeN ec (Program defs entry) n = pToTree $ buildTreeN ec defs (PTree (Node (lookupFun defs entry) Regular) [] [] []) n
+    where
+        buildTreeN dc defs ptree 0 = ptree
+        buildTreeN dc defs ptree n = case buildTreeStep dc defs ptree of Left x -> x
+                                                                         Right x -> buildTreeN dc defs x (n - 1)

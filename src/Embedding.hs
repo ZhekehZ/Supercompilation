@@ -2,6 +2,8 @@ module Embedding where
 
 import Lang
 import Utils
+import Eval
+import Instances
 
 -- Homeomorphic embedding
 (<|) :: (Eq val, Eq bf, Eq bp) => Term val bf bp -> Term val bf bp -> Bool

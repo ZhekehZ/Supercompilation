@@ -22,9 +22,10 @@ subst new name expr = case expr of
     ValP p args -> ValP p (substThis <$> args)
     Con  c args -> Con  c (substThis <$> args)
     x :-> t     -> if x == name then expr else
-                   let x' = assertFree x (getFree t \\ [x]) in x' :-> substThis (renameToIn x x' t)
-    Let x e t   -> if x == name then Let x (substThis e) t else
-                   let x' = assertFree x (getFree t \\ [x]) in Let x' (substThis e) (substThis (renameToIn x x' t))
+                   if x `elem` freeInNew then
+                        let x' = assertFree x (getFree t \\ [x]) in x' :-> substThis (subst (Var x') x t)
+                   else x :-> substThis t
+    Let x e t   -> case substThis ((x :-> t) :@ e) of ((x :-> t) :@ e) -> Let x e t
     e1 :@ e2    -> substThis e1 :@ substThis e2
     Case e pmc  -> Case (substThis e) (substThisPM <$> pmc)
     where
