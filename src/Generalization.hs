@@ -45,7 +45,7 @@ a >*<. b = snd $ go (getFree a ++ getFree b) a b
             _ -> let [v] = getFreeName banned ["v"] in (v :  banned, (Var v, [v := t1], [v := t2]))
 
 
--- General subexpression rule
+-- Common subexpression rule
 subExprRule :: (Eq val, Eq bf, Eq bp) => Generalization (Term val bf bp) -> Generalization (Term val bf bp)
 subExprRule (e, [], []) = (e, [], [])
 subExprRule g@(term, s1, s2) = case find ((> 1) . length) sames of

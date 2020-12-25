@@ -7,6 +7,7 @@ import Driving
 import ProcessTree
 import CodeGeneration
 import Generalization
+import Data.Maybe
 
 data BuiltinF = Plus | Minus | Mul   deriving (Show, Eq)
 data BuiltinP = Gt | Eql             deriving (Show, Eq)
@@ -40,6 +41,15 @@ listToTerm (x : xs) = Con "Cons" [Con x [], listToTerm xs]
 strToTerm :: String -> TERM
 strToTerm = listToTerm . map (:[])
 
+termToStr :: TERM -> Maybe String
+termToStr (Con "Nil"  []) = Just ""
+termToStr (Con "Cons" [Con [l] [], rest]) | Just rs <- termToStr rest = Just $ l : rs
+termToStr _ = Nothing
+
+repr :: TERM -> String
+repr t = fromMaybe (show t) (termToStr t) 
+
+
 applyDefaults :: PROGRAM -> [(Name, TERM)] -> PROGRAM
 applyDefaults (Program defs entry) defaults = 
     let doSubs = applySubstitution $ uncurry (:=) <$> defaults 
@@ -67,4 +77,6 @@ treeN prog defaults = buildProgramTreeN (EC evalIntF evalIntP) (applyDefaults pr
 type COMPILEARGUMENTS = [(Name, TERM)]
 type EVALARGUMENTS = [(Name, TERM)]
 type EXPECTED = TERM
+
 type TESTCASES = [ (COMPILEARGUMENTS, EVALARGUMENTS, EXPECTED) ]
+type TESTMATRIX = ([COMPILEARGUMENTS], [EVALARGUMENTS], Bool)

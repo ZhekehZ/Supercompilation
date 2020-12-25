@@ -2,13 +2,6 @@ module Lang where
 
 type Name = String
 
-
-{-
-
-              TODO: REMOVE VAL AND BUILTINS
-
--}
-
 data Term val bf bp
               = Val  { getValue                :: val
                      }

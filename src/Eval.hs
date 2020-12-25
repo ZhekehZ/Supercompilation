@@ -57,7 +57,7 @@ evalExpr1 evalContext@(EC bfEval bpEval) defines expression = case expression of
                             Just (Pat _ an :=> t) -> 
                                 let newNames = getFreeName (getFree e ++ (getFree t \\ an)) an
                                     t' = foldl (\t (from, to) -> rename from to t) t (zip an newNames)
-                                in Just $ foldl (\t (n, v) -> subst v n t) t (zip newNames args)
+                                in Just $ foldl (\t (n, v) -> subst v n t) t' (zip newNames args)
                             Nothing -> error $ "Invalid pattern-matching :" ++ c ++ "(...), pm = " ++ concat ((\(Pat c _ :=>b) -> c ++ ", ") <$> pms)
                       _ -> Nothing
   _            -> Nothing

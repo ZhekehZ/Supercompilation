@@ -36,42 +36,64 @@ program2 = Program
     }
 
 
--- prog2Tests :: TESTCASES
--- prog2Tests = [
---         ( [ ("p", strToTerm "ABC") ] :: COMPILEARGUMENTS
---         , [ ("s", strToTerm "ABC") ] :: EVALARGUMENTS
---         , true                       :: EXPECTED
---         )
---         ,
---         ( []  
---         , [  ("p", strToTerm "ABBB"), ("s", strToTerm "BBBABBABCBB") ]
---         , true                              
---         )
---         ,
---         ( [ ("p", strToTerm "ABB") ] 
---         , [ ("s", strToTerm "ABC") ] 
---         , false                          
---         )
---         ,
---         ( [ ("p", strToTerm "AB") ] 
---         , [ ("s", strToTerm "CCCABCCC") ] 
---         , true                          
---         )
---         ,
---         ( [ ("p", strToTerm "CA") ] 
---         , [ ("s", strToTerm "ABBAAB") ] 
---         , false                          
---         )
---         ,
---         ( [ ("s", strToTerm "ABC") ]   -- ~~Slow~~
---         , [ ("p", strToTerm "ABB") ]
---         , false                          
---         )
---         ,
---         ( []  
---         , [  ("p", strToTerm "AC"), ("s", strToTerm "BBBABBABCBB") ]
---         , true                          
---         )
---     ]
---     where true = Con "True" []
---           false = Con "False" []  
+prog2Tests :: TESTCASES
+prog2Tests = [
+        ( [ ("p", strToTerm "ABC") ] :: COMPILEARGUMENTS
+        , [ ("s", strToTerm "ABC") ] :: EVALARGUMENTS
+        , true                       :: EXPECTED
+        )
+        ,
+        ( [ ("p", strToTerm "ABB") ] 
+        , [ ("s", strToTerm "ABC") ] 
+        , false                          
+        )
+        ,
+        ( [ ("p", strToTerm "AB") ] 
+        , [ ("s", strToTerm "CCCABCCC") ] 
+        , true                          
+        )
+        ,
+        ( [ ("p", strToTerm "CA") ] 
+        , [ ("s", strToTerm "ABBAAB") ] 
+        , false                          
+        )
+        ,
+        ( [ ("s", strToTerm "ABC") ] 
+        , [ ("p", strToTerm "ABB") ]
+        , false                          
+        )
+    ]
+    where true = Con "True" []
+          false = Con "False" []  
+
+
+prog2MatrixTests :: TESTMATRIX
+prog2MatrixTests = (
+    ((:[]) . (,) "p" . strToTerm) <$> 
+        [ "A"
+        , "AA"
+        , "AAA"
+        , "AB"
+        , "ABB"
+        , "AAB"
+        , "ABC"
+        , "AAAB"
+        , "ABABAB"
+        , "ABCAABB"
+        , "AAABAAA"
+        , "AAABACA"
+        , "AAABACBB"
+        ] :: [COMPILEARGUMENTS]
+    , 
+    ((:[]) . (,) "s" . strToTerm) <$> 
+        [ "AAAAAAA"
+        , "AAAABBBBBBCCCCC"
+        , "BABABABABACBABABABAB"
+        , "CCCCCCAAAAAAAACCCCCCAAA"
+        , "BABABABABABCAABBBABABAB"
+        , "CCCCCAAAAABAAAABACACCC"
+        , "BACBBACAAABACBBAC"
+        ] :: [EVALARGUMENTS]
+    ,
+    True
+    )

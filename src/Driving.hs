@@ -29,7 +29,8 @@ setMeta meta iter = let (Node term _) = getCurrent iter in pSet (Node term meta)
 buildTreeStep :: (Eq val, Eq bf, Eq bp) => EvalContext val bf bp -> [Definition val bf bp] -> TreeIterator (Node val bf bp) ->
                                 Either (TreeIterator (Node val bf bp)) (TreeIterator (Node val bf bp))
 buildTreeStep ec defs ptree = 
-    if isObservable e then tryNext ptree else
+    let tryEval = evalExpr ec defs e in
+    if isNF tryEval then tryNext (pSet (Node tryEval Regular) ptree) else -- NF
     case renaming of
         Just (i, e', e'iter, path, _, _, _) -> -- RENAMING
             let Just ren = getRenaming e' e
@@ -38,11 +39,11 @@ buildTreeStep ec defs ptree =
         Nothing -> case substs of 
             Just  (i, e', e'iter, path, g, s1, s2) -> -- SUBSTITUTION
                         let en = foldr (\(x := t) e -> Let x t e) g s1
-                        in tryNext $ pSet (Node en MetaLet) ptree
+                        in tryNext $ pSetChildren [tToTree g] $ pSet (Node en MetaLet) ptree
             Nothing -> case coupling of 
                 Just (i, e', e'iter, path, g, s1, s2) -> -- COUPLING
                     let e'n = foldr (\(x := t) e -> Let x t e) g s2
-                    in tryNext $ pSetChildren [tToTree g] $ pSet (Node e'n MetaLet) e'iter
+                    in tryNext $ pSetChildren (tToTree <$> (range s1 ++ [g])) $ pSet (Node e'n MetaLet) e'iter
                 Nothing -> case e of
                         Var x -> tryNext ptree -- VARIABLE (extra case)
                         _ -> let (ctx, red) = decompose e -- DRIVING
@@ -55,6 +56,11 @@ buildTreeStep ec defs ptree =
                                  Case (Var v) pm  -> -- (extra case : find and replace all occurrences)
                                      let (caseImpls, caseNames) = unzip $ (\(Pat c ns :=> _) -> (subst (Con c (map Var ns)) v e, (c, ns))) <$> pm 
                                      in tryNext $ setMeta (MetaSplit e caseNames) $ pSetChildren (tToTree <$> (Var v : caseImpls)) ptree
+                                 Case v@ValP{} pm -> 
+                                     let (caseImpls, caseNames) = unzip $ (\(Pat c ns :=> _) -> 
+                                                                            let Just (_ :=> val) = find (\(Pat c' _ :=> _) -> c == c') pm
+                                                                            in (fillHole ctx val, (c, ns))) <$> pm 
+                                     in tryNext $ setMeta (MetaSplit e caseNames) $ pSetChildren (tToTree <$> (v : caseImpls)) ptree
                                  Case ce pm       -> 
                                      let (caseImpls, caseNames) = unzip $ (\(Pat c ns :=> _) -> (fillHole ctx (Con c (map Var ns)), (c, ns))) <$> pm 
                                      in tryNext $ setMeta (MetaSplit e caseNames) $ pSetChildren (tToTree <$> (ce : caseImpls)) ptree
@@ -106,47 +112,3 @@ instance (Show val, Show bf, Show bp) => Show (Node val bf bp) where
                                        istr = take (4 - length idx) (repeat ' ') ++ idx
                                    in showString ("    | Node\n" ++ offset ++ istr ++ "| TERM = ") . shows term 
                                       . showString ("\n" ++ offset ++ "    | META = ") . shows meta
-
-
-{-
-
-fun1 = \s -> case s of { 
-            Nil => False, 
-            Cons(a1, a2) => case a1 of { 
-                A => True, 
-                B => case s of { 
-                    Nil => s, 
-                    Cons(a1, a2') => fun1 a2' 
-                }, 
-                C => case s of { 
-                    Nil => s, 
-                    Cons(a1, a2') => fun1 a2' 
-                } 
-            } 
-        }
-
-fun1 = \s -> case s of { 
-            Nil => False, 
-            Cons(a1, a2) => case a1 of { 
-                A => case a2 of { 
-                    Nil => False, 
-                    Cons(a1, a2') => case a1 of { 
-                        A => case s of { 
-                            Cons(a1, a2') => fun1 a2' 
-                        }, 
-                        B => True, 
-                        C => case s of { 
-                            Cons(a1, a2') => fun1 a2' 
-                        } 
-                    } 
-                }, 
-                B => case s of { 
-                    Cons(a1, a2') => fun1 a2' 
-                }, 
-                C => case s of { 
-                    Cons(a1, a2') => fun1 a2' 
-                } 
-            }
-        }
-
--}

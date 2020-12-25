@@ -39,7 +39,17 @@ lookupFun (Def defName expr : def) name | name == defName = expr
                                         | otherwise       = lookupFun def name
 lookupFun [] name = error $ "Invalid function name: " ++ name
 
-getFreeName banned args = take (length args) $ filter (`notElem` banned) $ args ++ ['v' : show i | i <- [1 ..]] 
+getFreeName banned args = take (length args) $ filter (`notElem` banned) $ args ++ (['v' : show i | i <- [1 ..]] \\ args) 
+
+isNF :: Term val bf pb -> Bool
+isNF term = case term of
+    Val{}       -> True
+    Con{}       -> True
+    _:->_       -> True
+    ValF _ args -> all isNF args
+    ValP _ args -> all isNF args
+    Var{}       -> True
+    _           -> False
 
 isSet :: Eq a => [a] -> Bool
 isSet xs = null $ xs \\ nub xs

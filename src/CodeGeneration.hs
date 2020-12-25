@@ -44,7 +44,8 @@ cogen st (Branch (Node term meta) ch) =
             return $ funcCallToApp (Left fun, [fromMaybe (Var an) (findByDom subs an) | an <- argNames])
 
         MetaLet -> do
-            return $ term
+            args <- for ch (cogen (("", []) : st))
+            return $ replaceT (last args) term
     where
         makeFun []     body = body
         makeFun (x:xs) body = x :-> makeFun xs body
@@ -64,32 +65,3 @@ compileTree tree = case runStateT (cogen [] tree) (CGS [] ["fun" ++ show i | i <
         forceLets expression = case expression of
             (Let x e t)  -> subst e x (forceLets t)
             x -> x
-
-
--- fun1 = \s -> case case s of { 
---                     Nil => False, 
---                     Cons(v1, v3) => case cmp v1 A of { 
---                             True => m1 Cons(B, Nil) v3 Cons(A, Cons(B, Nil)) s, 
---                             False => next s Cons(A, Cons(B, Nil)) 
---                     } 
---             } of { 
---                 Nil => False, 
---                 Cons(v1, v3) => case case case v1 of { 
---                     A => case A of { 
---                         A => True, 
---                         B => False, 
---                         C => False 
---                     }, 
---                     B => case A of { 
---                         A => False, 
---                         B => True, 
---                         C => False 
---                     }, 
---                     C => case A of { 
---                         A => False, 
---                         B => False, 
---                         C => True 
---                     } 
---                 } of { 
---                     True => m1 Cons(B, Nil) v3 Cons(A, Cons(B, Nil)) Cons(v1, v3), False => next Cons(v1, v3) Cons(A, Cons(B, Nil)) } of { A => fun2 v3, B => fun1 v3, C => fun1 v3 } }
--- fun2 = \v3 -> case case v3 of { Nil => False, Cons(v1, v4) => case cmp v1 B of { True => m1 Nil v4 Cons(A, Cons(B, Nil)) Cons(A, v3), False => next Cons(A, v3) Cons(A, Cons(B, Nil)) } } of { Nil => False, Cons(v1, v4) => case case case v1 of { A => case B of { A => True, B => False, C => False }, B => case B of { A => False, B => True, C => False }, C => case B of { A => False, B => False, C => True } } of { True => m1 Nil v4 Cons(A, Cons(B, Nil)) Cons(A, Cons(v1, v4)), False => next Cons(A, Cons(v1, v4)) Cons(A, Cons(B, Nil)) } of { A => fun2 v4, B => True, C => fun1 v4 } }
