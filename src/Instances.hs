@@ -11,18 +11,25 @@ newtype RawString = RawString String
 instance Show RawString where
     showsPrec p (RawString s) = showString s
 
+
+showArgs as = case as of
+    []       -> id
+    (a : as) -> foldl (\s a -> s . showString ", " . shows a) (shows a) as
+
 instance (Show val, Show bf, Show bp) => Show (Term val bf bp) where
-    showsPrec p t = case t of
-        Val v     -> shows v
-        Var v     -> showString v
-        Fun v     -> showString v
-        ValF f as -> shows f . showParen True (showArgs as)
-        ValP f as -> shows f . showParen True (showArgs as)
-        Con  f as -> showString f . if null as then id else showParen True (showArgs as)
-        a :@ b    -> showParen (p > 6) $ showsPrec 6 a . showChar ' ' . showsPrec 7 b
-        a :-> b   -> showParen (p > 0) $ showString ('\\' : a ++ " -> ") . shows b
-        Case e cs -> showString "case " . shows e . showString " of { " . showArgs cs . showString " }"
-        Let x e e' -> showParen (p > 0) $ showString ("let " ++ x ++ " = ") . shows e . showString " in " . shows e'
+    showsPrec p' t = 
+        let (off, p) = p' `divMod` 10 
+        in case t of
+            Val v     -> shows v
+            Var v     -> showString v
+            Fun v     -> showString v
+            ValF f as -> shows f . showParen True (showArgs as)
+            ValP f as -> shows f . showParen True (showArgs as)
+            Con  f as -> showString f . if null as then id else showParen True (showArgs as)
+            a :@ b    -> showParen (p > 6) $ showsPrec 6 a . showChar ' ' . showsPrec 7 b
+            a :-> b   -> showParen (p > 0) $ showString ('\\' : a ++ " -> ") . shows b
+            Case e cs -> showString "case " . shows e . showString " of { " . showArgs cs . showString " }"
+            Let x e e' -> showParen (p > 0) $ showString ("let " ++ x ++ " = ") . shows e . showString " in " . shows e'
 
 instance (Show val, Show bf, Show bp) => Show (PatternMatchingCase val bf bp) where
     showsPrec _ (Pat c args :=> term) = showString c . (if null args then id

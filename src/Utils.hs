@@ -39,10 +39,6 @@ lookupFun (Def defName expr : def) name | name == defName = expr
                                         | otherwise       = lookupFun def name
 lookupFun [] name = error $ "Invalid function name: " ++ name
 
-showArgs as = case as of
-    []       -> id
-    (a : as) -> foldl (\s a -> s . showString ", " . shows a) (shows a) as
-
 getFreeName banned args = take (length args) $ filter (`notElem` banned) $ args ++ ['v' : show i | i <- [1 ..]] 
 
 isSet :: Eq a => [a] -> Bool
@@ -50,3 +46,6 @@ isSet xs = null $ xs \\ nub xs
 
 isVar (Var _) = True
 isVar _ = False
+
+isCon Con{} = True
+isCon _ = False

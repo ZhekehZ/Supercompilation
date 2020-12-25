@@ -19,6 +19,8 @@ main = do
          , "ABABAB"
          , "ABCAABB"
          , "AAABAAA"
+         , "AAABACA"
+         , "AAABACBB"
          ] $ \str -> do
              putStrLn $ "Case " ++ str ++ ":"
              print $ compile program2 [("p", strToTerm str)]

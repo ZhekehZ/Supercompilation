@@ -26,7 +26,6 @@ setMeta :: Meta val bf bp -> TreeIterator (Node val bf bp) -> TreeIterator (Node
 setMeta meta iter = let (Node term _) = getCurrent iter in pSet (Node term meta) iter 
 
 
-
 buildTreeStep :: (Eq val, Eq bf, Eq bp) => EvalContext val bf bp -> [Definition val bf bp] -> TreeIterator (Node val bf bp) ->
                                 Either (TreeIterator (Node val bf bp)) (TreeIterator (Node val bf bp))
 buildTreeStep ec defs ptree = 
@@ -51,17 +50,14 @@ buildTreeStep ec defs ptree =
                                  eredt = flip Node Regular <$> e''
                              in case red of
                                  Fun _            -> tryNext $ pSetChildren [tToTree $ fromJust e''] $ ptree 
-                                 (_ :-> _) :@ _   -> {-buildTreeStep ec defs-} Right $ pSet (fromJust eredt) ptree  -- uncomment to skip intermediate steps
-                                 Case (Con _ _) _ -> {-buildTreeStep ec defs-} Right $ pSet (fromJust eredt) ptree 
-                                 Case (Var n) pm  ->
-                                     let caseImpls = (\(Pat c ns :=> _) -> (Con c (map Var ns), c, ns)) <$> pm 
-                                         getCaseImpl (Pat c ns) = Con c (Var <$> ns)
-                                         cases = map (\(p@(Pat c ns) :=> ex) -> 
-                                                             let (ctx', _) = decompose (subst (getCaseImpl p) n e)
-                                                             in fillHole ctx' $ if n `elem` ns then ex else subst (Con c (map Var ns)) n ex) pm
-                                         casesNames = map (\(Pat c ns :=> _) -> (c, ns)) pm
-                                     in tryNext $ setMeta (MetaSplit e casesNames) $ pSetChildren (tToTree <$> (Var n : cases)) ptree
-                                 Case ce pm       -> undefined
+                                 (_ :-> _) :@ _   -> {-buildTreeStep ec defs-} Right $ pSet (fromJust eredt) ptree  -- uncomment and remove `Right`
+                                 Case Con{} _     -> {-buildTreeStep ec defs-} Right $ pSet (fromJust eredt) ptree  --  to skip intermediate steps
+                                 Case (Var v) pm  -> -- (extra case : find and replace all occurrences)
+                                     let (caseImpls, caseNames) = unzip $ (\(Pat c ns :=> _) -> (subst (Con c (map Var ns)) v e, (c, ns))) <$> pm 
+                                     in tryNext $ setMeta (MetaSplit e caseNames) $ pSetChildren (tToTree <$> (Var v : caseImpls)) ptree
+                                 Case ce pm       -> 
+                                     let (caseImpls, caseNames) = unzip $ (\(Pat c ns :=> _) -> (fillHole ctx (Con c (map Var ns)), (c, ns))) <$> pm 
+                                     in tryNext $ setMeta (MetaSplit e caseNames) $ pSetChildren (tToTree <$> (ce : caseImpls)) ptree
     where
         tryNext it = maybe (Left it) Right (pNext it)
         haveNextChild = not . null . getRightChildren
@@ -78,19 +74,12 @@ buildTreeStep ec defs ptree =
                ]
 
         renaming = find (\(_,e',_,_,_,_,_) -> isRenaming e' e) memo
-        substs = find (\(_,e',_,_,_,_,_) -> case findSubst e' e of {Just _ -> True; _ -> False}) memo
+        substs = find (\(_,e',_,_,_,_,_) -> isSubst e' e) memo
         coupling = find (\(_,e',_,_,_,_,_) -> e' <|.. e) memo
 
         applyPath []     node = node
         applyPath (x:xs) node = applyPath xs $ pChild node x
-
-        isCon Con{} = True
-        isCon _ = False
-
-        findSubst e1 e2 = case e1 >*< e2 of
-                            (e, s1, s2) | all (not . isCon . rng) s2 && isRenaming e1 e && isRenaming e e1
-                                                -> Just $ map (\(n := v) -> getVarName (fromJust $ findByDom s1 n) := v) s2
-                                        | otherwise -> Nothing
+        isSubst e1 e2 = case e1 >*< e2 of (e, s1, s2) -> all (not . isCon . rng) s2 && isRenaming e1 e && isRenaming e e1
 
 
 buildProgramTree ec (Program defs entry) = pToTree $ buildTree ec defs (PTree (Node (lookupFun defs entry) Regular) [] [] [])

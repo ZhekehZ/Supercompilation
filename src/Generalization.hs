@@ -55,7 +55,7 @@ subExprRule g@(term, s1, s2) = case find ((> 1) . length) sames of
 
 
 getRenaming :: (Eq val, Eq bf, Eq bp) => Term val bf bp -> Term val bf bp -> Maybe (Substitution (Term val bf bp))
-getRenaming t1 t2 = filterId . nub <$> case (t1, t2) of
+getRenaming t1 t2 = filterOutId . nub <$> case (t1, t2) of
     (Var v   , Var v'   ) -> Just [v := Var v']
     (Con c a1, Con c' a2) | c == c'
                           , Just ss <- traverse (uncurry getRenaming) (zip a1 a2) -> Just $ concat ss
@@ -63,7 +63,7 @@ getRenaming t1 t2 = filterId . nub <$> case (t1, t2) of
                           , Just s2 <- getRenaming y t -> Just $ s1 ++ s2
     (Fun f   , Fun f'   ) | f == f' -> Just []
     _ -> Nothing
-    where filterId = filter (\(x := y) -> case y of { Var z -> x /= z; _ -> True})
+    where filterOutId = filter (\(x := y) -> case y of { Var z -> x /= z; _ -> True})
 
 
 isRenaming :: (Eq val, Eq bf, Eq bp) => Term val bf bp -> Term val bf bp -> Bool
