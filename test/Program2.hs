@@ -23,8 +23,7 @@ program2 = Program
             ]
         , Def "next" $ "x" :-> "p" :->
             Case (Var "x")
-            [ Pat "Nil" [] :=> Var "x"
-            , Pat "Cons" ["s", "ss"] :=> Fun "m1" :@ Var "p" :@ Var "ss" :@ Var "p" :@ Var "ss"
+            [ Pat "Cons" ["s", "ss"] :=> Fun "m1" :@ Var "p" :@ Var "ss" :@ Var "p" :@ Var "ss"
             ]
         , Def "cmp" $ "x" :-> "y" :-> 
             Case (Var "x")
@@ -37,42 +36,42 @@ program2 = Program
     }
 
 
-prog2Tests :: TESTCASES
-prog2Tests = [
-        ( [ ("p", strToTerm "ABC") ] :: COMPILEARGUMENTS
-        , [ ("s", strToTerm "ABC") ] :: EVALARGUMENTS
-        , true                       :: EXPECTED
-        )
-        ,
-        ( []  
-        , [  ("p", strToTerm "ABBB"), ("s", strToTerm "BBBABBABCBB") ]
-        , true                          
-        )
-        ,
-        ( [ ("p", strToTerm "ABB") ] 
-        , [ ("s", strToTerm "ABC") ] 
-        , false                          
-        )
-        ,
-        ( [ ("p", strToTerm "AB") ] 
-        , [ ("s", strToTerm "CCCABCCC") ] 
-        , true                          
-        )
-        ,
-        ( [ ("p", strToTerm "CA") ] 
-        , [ ("s", strToTerm "ABBAAB") ] 
-        , false                          
-        )
-        ,
-        ( [ ("s", strToTerm "ABC") ]   -- ~~Slow~~
-        , [ ("p", strToTerm "ABB") ]
-        , false                          
-        )
-        ,
-        ( []  
-        , [  ("p", strToTerm "AC"), ("s", strToTerm "BBBABBABCBB") ]
-        , true                          
-        )
-    ]
-    where true = Con "True" []
-          false = Con "False" []  
+-- prog2Tests :: TESTCASES
+-- prog2Tests = [
+--         ( [ ("p", strToTerm "ABC") ] :: COMPILEARGUMENTS
+--         , [ ("s", strToTerm "ABC") ] :: EVALARGUMENTS
+--         , true                       :: EXPECTED
+--         )
+--         ,
+--         ( []  
+--         , [  ("p", strToTerm "ABBB"), ("s", strToTerm "BBBABBABCBB") ]
+--         , true                              
+--         )
+--         ,
+--         ( [ ("p", strToTerm "ABB") ] 
+--         , [ ("s", strToTerm "ABC") ] 
+--         , false                          
+--         )
+--         ,
+--         ( [ ("p", strToTerm "AB") ] 
+--         , [ ("s", strToTerm "CCCABCCC") ] 
+--         , true                          
+--         )
+--         ,
+--         ( [ ("p", strToTerm "CA") ] 
+--         , [ ("s", strToTerm "ABBAAB") ] 
+--         , false                          
+--         )
+--         ,
+--         ( [ ("s", strToTerm "ABC") ]   -- ~~Slow~~
+--         , [ ("p", strToTerm "ABB") ]
+--         , false                          
+--         )
+--         ,
+--         ( []  
+--         , [  ("p", strToTerm "AC"), ("s", strToTerm "BBBABBABCBB") ]
+--         , true                          
+--         )
+--     ]
+--     where true = Con "True" []
+--           false = Con "False" []  

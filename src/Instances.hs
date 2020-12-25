@@ -29,8 +29,6 @@ instance (Show val, Show bf, Show bp) => Show (PatternMatchingCase val bf bp) wh
                                 else showParen True (showArgs (RawString <$> args))) . showString " => " . shows term
 
 
-
-
 instance (Show val, Show bf, Show bp) => Show (Definition val bf bp) where
     showsPrec _ (Def name term) = showString (name ++ " = ") . shows term
 

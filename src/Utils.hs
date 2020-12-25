@@ -29,9 +29,9 @@ getFree term = nub $ case term of
     Case e p    -> getFree e `union` (p >>= getFreePM)
     Let x e t   -> getFree e `union` filter (/= x) (getFree t)
     Var x       -> [x]
-    _           -> []
-    where
-        getFreePM ((Pat _ args) :=> t) = getFree t \\ args
+    Fun _       -> []
+    Val _       -> []
+    where getFreePM ((Pat _ args) :=> t) = getFree t \\ args
 
 
 lookupFun :: [Definition val bf bp] -> Name -> Term val bf bp
@@ -43,5 +43,10 @@ showArgs as = case as of
     []       -> id
     (a : as) -> foldl (\s a -> s . showString ", " . shows a) (shows a) as
 
+getFreeName banned args = take (length args) $ filter (`notElem` banned) $ args ++ ['v' : show i | i <- [1 ..]] 
+
 isSet :: Eq a => [a] -> Bool
 isSet xs = null $ xs \\ nub xs
+
+isVar (Var _) = True
+isVar _ = False

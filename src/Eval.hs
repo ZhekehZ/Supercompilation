@@ -12,6 +12,9 @@ data EvalContext val bf bp = EC (BuiltinFunctionEval val bf) (BuiltinPredicateEv
 evalProgram :: Program val bf bp -> EvalContext val bf bp -> Term val bf bp
 evalProgram (Program def entry) context = evalExpr context def (lookupFun def entry)
 
+rename :: Name -> Name -> Term val bf bp -> Term val bf bp
+rename x y term = subst (Var y) x term
+
 -- Substitutuion
 subst :: Term val bf bp -> Name -> Term val bf bp -> Term val bf bp
 subst new name expr = case expr of
@@ -21,29 +24,16 @@ subst new name expr = case expr of
     ValF f args -> ValF f (substThis <$> args)
     ValP p args -> ValP p (substThis <$> args)
     Con  c args -> Con  c (substThis <$> args)
-    x :-> t     -> if x == name then expr else
-                   if x `elem` freeInNew then
-                        let x' = assertFree x (getFree t \\ [x]) in x' :-> substThis (subst (Var x') x t)
-                   else x :-> substThis t
+    x :-> t     -> if x == name then expr else let [x'] = getFreeName (getFree expr ++ getFree new) [x] 
+                                               in x' :-> substThis (rename x x' t)
     Let x e t   -> case substThis ((x :-> t) :@ e) of ((x :-> t) :@ e) -> Let x e t
     e1 :@ e2    -> substThis e1 :@ substThis e2
     Case e pmc  -> Case (substThis e) (substThisPM <$> pmc)
     where
-        freeInNew = getFree new
         substThis = subst new name
-        assertFree x free = if x `elem` freeInNew || x `elem` free then assertFree (x ++ "'") free else x
-
-        substThisPM pat@(Pat c args :=> t) = if any (== name) args then pat else
-            let uniArgs = (\(_, n) -> "a" ++ show n) <$> zip args [1 :: Int .. ]
-                freArgs = (\x -> assertFree x (getFree t)) <$> uniArgs
-            in Pat c freArgs :=> substThis (foldl (\term (wh, to) -> subst (Var to) wh term) t (zip args freArgs))
-
-
--- Find pattern-matching case by contructor name
-lookupPM :: Name -> PatternMatching val bf bp -> Maybe (PatternMatchingCase val bf bp)
-lookupPM c (pmc@(Pat c' _ :=> _) : pms) | c == c'   = Just pmc
-                                        | otherwise = lookupPM c pms
-lookupPM _ _ = Nothing
+        substThisPM pat@(Pat c args :=> t) = if name `elem` args then pat else
+            let (a', t') = foldr (\n (ars, t) -> let [n'] = getFreeName (getFree new ++ getFree t) [n] in (n':ars, rename n n' t)) ([], t) args
+            in Pat c a' :=> substThis t' 
 
 -- Evaluate expression with given context and function definitions
 evalExpr :: EvalContext val bf bp -> [Definition val bf bp] -> Term val bf bp -> Term val bf bp
@@ -62,10 +52,9 @@ evalExpr1 evalContext@(EC bfEval bpEval) defines expression = case expression of
   (Let x e t)  -> (flip (Let x) t <$> eval e) <|> Just (subst e x t)
   (Case e pms) -> (flip Case pms <$> eval e) <|>
                   case e of
-                      Con c args -> case lookupPM c pms of
-                          Just (Pat _ argNames :=> t) ->
-                              Just $ foldl (\term (name, value) -> subst value name term) t (zip argNames args)
-                          Nothing -> error "Invalid pattern-matching"
+                      Con c args -> case find (\(Pat c' _ :=> _) -> c == c') pms of
+                            Just (Pat _ an :=> t) -> Just $ foldl (\t (n, v) -> subst v n t) t (zip an args)
+                            Nothing -> error $ "Invalid pattern-matching :" ++ c ++ "(...), pm = " ++ concat ((\(Pat c _ :=>b) -> c ++ ", ") <$> pms)
                       _ -> Nothing
   _            -> Nothing
   where
@@ -73,4 +62,4 @@ evalExpr1 evalContext@(EC bfEval bpEval) defines expression = case expression of
       evalArguments (x:xs) = ((:xs) <$> eval x) <|> ((x:) <$> evalArguments xs)
       evalArguments []     = Nothing
       tryGetValue (Val v) = Just v
-      tryGetValue _ = Nothing
+      tryGetValue _       = Nothing

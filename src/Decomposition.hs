@@ -17,22 +17,16 @@ fillHole (CCase c pm) t = Case (fillHole c t) pm
 
 decompose :: Term val bf bp -> Decomposition val bf bp
 decompose term = case term of
-    (ValF _ _) -> (Hole, term)
-    (ValP _ _) -> (Hole, term)
-    (Var    _) -> (Hole, term)
-    (e1 :@ e2) -> case decompose e1 of (ctx, term) -> (ctx :@: e2, term)
-    (Case e p) -> case decompose e of (ctx, term) -> (CCase ctx p, term)
-    _          -> error "The term is in NF or evaluatable"
+    Fun _        -> (Hole, term)
+    (x:->y):@z   -> (Hole, term)   
+    Case Var{} _ -> (Hole, term)  
+    Case Con{} _ -> (Hole, term)  
+    a :@ b       -> let (ctx, e') = decompose a in (ctx :@: b, e')
+    Case ce xs   -> let (ctx, e') = decompose ce in (CCase ctx xs, e')
 
 isObservable :: Term val bf pb -> Bool
 isObservable term = case term of
-    (Val   _) -> True
-    (Con _ _) -> True
-    (_ :-> _) -> True
-    _         -> False
-
-getCaseVariants :: Context val bf bp -> [(Name, [Name])]
-getCaseVariants Hole            = []
-getCaseVariants (a :@: b)       = getCaseVariants a
-getCaseVariants (CCase Hole pm) = [(c, args) | Pat c args :=> t <- pm]
-getCaseVariants (CCase  ctx pm) = getCaseVariants ctx
+    Val   _ -> True
+    Con _ _ -> True
+    _ :-> _ -> True
+    _       -> False

@@ -12,16 +12,18 @@ a <| b = (a <|. b) || (a <|.. b) || (a <|... b)
 -- Variable
 (<|.) :: (Eq val, Eq bf, Eq bp) => Term val bf bp -> Term val bf bp -> Bool
 Var _ <|. Var _ = True
-x     <|. y     = x == y
+_     <|. _     = False
 
 -- Coupling
 (<|..) :: (Eq val, Eq bf, Eq bp) => Term val bf bp -> Term val bf bp -> Bool
-f_e1_en <|.. f_e1_en' = case (appAsFuncCall f_e1_en, appAsFuncCall f_e1_en') of
-  (Just (f, as), Just (f', as')) | f == f' -> all (uncurry (<|)) (zip as as')
-  _                                        -> False
+(Fun f   ) <|.. (Fun g   ) = f == g
+(f :@ fs ) <|.. (g :@ gs ) = (fs <| gs) && (f <|.. g)
+(Con c a1) <|.. (Con r a2) = c == r && (all (uncurry (<|)) $ zip a1 a2)
+(_       ) <|.. (_       ) = False
+
 
 -- Diving
 (<|...) :: (Eq val, Eq bf, Eq bp) => Term val bf bp -> Term val bf bp -> Bool
-e <|... h_e1_en = case appAsFuncCall h_e1_en of
-  Just (_, as) -> any (e <|) as
-  _            -> False
+e       <|... (f :@ a ) = (e <| a) || (e <|... f)
+e@Con{} <|... (Con _ a) = any (e <|) a
+_       <|... (_      ) = False

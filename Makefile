@@ -1,7 +1,7 @@
 all: tests clean
 
 int:
-	ghci test/TestRunner.hs -i src/*.hs test/*Prog*.hs
+	ghci test/TestRunner.hs -i src/*.hs test/*Prog*.hs test/Subst*
 
 tests: 
 	mkdir -p build
