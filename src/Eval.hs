@@ -13,7 +13,8 @@ evalProgram :: Program val bf bp -> EvalContext val bf bp -> Term val bf bp
 evalProgram (Program def entry) context = evalExpr context def (lookupFun def entry)
 
 rename :: Name -> Name -> Term val bf bp -> Term val bf bp
-rename x y term = subst (Var y) x term
+rename x y term | x == y = term 
+                | otherwise = subst (Var y) x term
 
 -- Substitutuion
 subst :: Term val bf bp -> Name -> Term val bf bp -> Term val bf bp
@@ -31,8 +32,8 @@ subst new name expr = case expr of
     Case e pmc  -> Case (substThis e) (substThisPM <$> pmc)
     where
         substThis = subst new name
-        substThisPM pat@(Pat c args :=> t) = if name `elem` args then pat else
-            let (a', t') = foldr (\n (ars, t) -> let [n'] = getFreeName (getFree new ++ getFree t) [n] in (n':ars, rename n n' t)) ([], t) args
+        substThisPM pat@(Pat c args :=> t) = if name `elem` args then pat else 
+            let (a', t') = foldr (\n (ars, t) -> let [n'] = getFreeName (name : getFree new ++ getFree t ++ ars) [n] in (n':ars, rename n n' t)) ([], t) args
             in Pat c a' :=> substThis t' 
 
 -- Evaluate expression with given context and function definitions
@@ -53,7 +54,10 @@ evalExpr1 evalContext@(EC bfEval bpEval) defines expression = case expression of
   (Case e pms) -> (flip Case pms <$> eval e) <|>
                   case e of
                       Con c args -> case find (\(Pat c' _ :=> _) -> c == c') pms of
-                            Just (Pat _ an :=> t) -> Just $ foldl (\t (n, v) -> subst v n t) t (zip an args)
+                            Just (Pat _ an :=> t) -> 
+                                let newNames = getFreeName (getFree e ++ (getFree t \\ an)) an
+                                    t' = foldl (\t (from, to) -> rename from to t) t (zip an newNames)
+                                in Just $ foldl (\t (n, v) -> subst v n t) t (zip newNames args)
                             Nothing -> error $ "Invalid pattern-matching :" ++ c ++ "(...), pm = " ++ concat ((\(Pat c _ :=>b) -> c ++ ", ") <$> pms)
                       _ -> Nothing
   _            -> Nothing

@@ -7,24 +7,45 @@ import Data.Foldable
 import Data.IORef
 
 
+
+strings = [ "AAAAAAA"
+          , "AAAABBBBBBCCCCC"
+          , "BABABABABACBABABABAB"
+          , "CCCCCCAAAAAAAACCCCCCAAA"
+          , "BABABABABABCAABBBABABAB"
+          , "CCCCCAAAAABAAAABACACCC"
+          , "BACBBACAAABACBBAC"
+          ]
+
+patterns = [ "A"
+           , "AA"
+           , "AAA"
+           , "AB"
+           , "ABB"
+           , "AAB"
+           , "ABC"
+           , "ABABAB"
+           , "ABCAABB"
+           , "AAABAAA"
+           , "AAABACA"
+           , "AAABACBB"
+           ]
+
+maxLenStr = foldl max 0 (length <$> strings)
+
+
 main :: IO ()
 main = do
-    for_ [ "A"
-         , "AA"
-         , "AAA"
-         , "AB"
-         , "ABB"
-         , "AAB"
-         , "ABC"
-         , "ABABAB"
-         , "ABCAABB"
-         , "AAABAAA"
-         , "AAABACA"
-         , "AAABACBB"
-         ] $ \str -> do
-             putStrLn $ "Case " ++ str ++ ":"
-             print $ compile program2 [("p", strToTerm str)]
-             putStrLn ""
+    for_ patterns $ \pat -> do
+            putStrLn $ "Pattern " ++ pat ++ ":"
+            let scProg = compile program2 [("p", strToTerm pat)]
+            print $ scProg
+
+            for_ strings $ \str -> do 
+                putStr $ "str> " ++ str ++ replicate (maxLenStr - length str) ' ' ++ ": " 
+                print $ eval scProg [("s", strToTerm str)]
+
+            putStrLn ""
 
         
     -- putStrLn "--- Start ---\n-------------"
