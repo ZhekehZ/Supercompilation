@@ -17,12 +17,10 @@ fillHole (CCase c pm) t = Case (fillHole c t) pm
 
 decompose :: Term val bf bp -> Decomposition val bf bp
 decompose term = case term of
-    Fun _        -> (Hole, term)
-    (x:->y):@z   -> (Hole, term)   
-    Case Var{} _ -> (Hole, term)  
-    Case Con{} _ -> (Hole, term)  
+    (x:->y):@z   -> (Hole, term)  
     a :@ b       -> let (ctx, e') = decompose a in (ctx :@: b, e')
-    Case ce xs   -> let (ctx, e') = decompose ce in (CCase ctx xs, e')
+    Case ce xs   -> let (ctx, e') = decompose ce in (CCase ctx xs, e') 
+    _            -> (Hole, term)  
 
 isObservable :: Term val bf pb -> Bool
 isObservable term = case term of
