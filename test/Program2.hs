@@ -1,5 +1,9 @@
 module Program2 where
 
+{-
+    KMP test
+-}
+
 import Lang
 import IntProgram
 
@@ -69,7 +73,7 @@ prog2Tests = [
 
 prog2MatrixTests :: TESTMATRIX
 prog2MatrixTests = (
-    ((:[]) . (,) "p" . strToTerm) <$> 
+    (:[]) . (,) "p" . strToTerm <$> 
         [ "A"
         , "AA"
         , "AAA"
@@ -85,7 +89,7 @@ prog2MatrixTests = (
         , "AAABACBB"
         ] :: [COMPILEARGUMENTS]
     , 
-    ((:[]) . (,) "s" . strToTerm) <$> 
+    (:[]) . (,) "s" . strToTerm <$> 
         [ "AAAAAAA"
         , "AAAABBBBBBCCCCC"
         , "BABABABABACBABABABAB"

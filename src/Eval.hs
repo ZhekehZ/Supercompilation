@@ -4,7 +4,6 @@ import Lang
 import Utils
 import Data.List
 import Control.Applicative
-import Decomposition
 
 data EvalContext val bf bp = EC (BuiltinFunctionEval val bf) (BuiltinPredicateEval val bp)
 
@@ -40,12 +39,17 @@ subst new name expr = case expr of
 evalExpr :: EvalContext val bf bp -> [Definition val bf bp] -> Term val bf bp -> Term val bf bp
 evalExpr context def t = maybe t (evalExpr context def) (evalExpr1 context def t)
 
+evalExprN :: EvalContext val bf bp -> [Definition val bf bp] -> Term val bf bp -> Int -> Term val bf bp
+evalExprN context def t 0 = t
+evalExprN context def t n = maybe t (flip (evalExprN context def) (n - 1)) (evalExpr1 context def t)
+
+
 -- Evaluation step
 evalExpr1 :: EvalContext val bf bp -> [Definition val bf bp] -> Term val bf bp -> Maybe (Term val bf bp)
 evalExpr1 evalContext@(EC bfEval bpEval) defines expression = case expression of
-  ValF f args  -> (ValF f <$> evalArguments args) <|> ((Val . bfEval f) <$> traverse tryGetValue args)
+  ValF f args  -> (ValF f <$> evalArguments args) <|> (Val . bfEval f <$> traverse tryGetValue args)
   ValP p args  -> (ValP p <$> evalArguments args) <|>
-                                            ((flip Con [] . show . bpEval p) <$> traverse tryGetValue args)
+                                            (flip Con [] . show . bpEval p <$> traverse tryGetValue args)
   Var v        -> Nothing
   Fun f        -> Just $ lookupFun defines f
   ((x:->e):@t) -> Just $ subst t x e

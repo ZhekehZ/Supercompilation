@@ -1,5 +1,10 @@
 module Program1 where
 
+{-
+    sum (squares [1..n])
+-}
+
+
 import IntProgram
 import Lang
 

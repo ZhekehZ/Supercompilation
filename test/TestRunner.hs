@@ -5,6 +5,7 @@ import Program2
 import Lang
 import Data.Foldable
 import Data.IORef
+import Control.Monad
 
 
 main :: IO ()
@@ -12,6 +13,7 @@ main = do
     putStrLn "--- SIMPLE ---\n-------------"
     
     results <- newIORef []
+    totalFails <- newIORef 0
     
     for_ (zip3 [1..] programs tests) $ \(index, program, tests) -> do 
         putStrLn $ ">> Program #" ++ show index
@@ -58,7 +60,7 @@ main = do
     res <- readIORef results
     for_ (zip [1..] (reverse res)) $ \(i, (succ, fail)) -> do
         putStrLn $ "Test " ++ show i ++ ": " ++ show succ ++ " successful, " ++ show fail ++ " failed"
-    
+        modifyIORef totalFails (+ fail)
 
 
 
@@ -68,10 +70,10 @@ main = do
 
     for_ (zip [1..] matrixTests) $ \(i, (compileArgs, evalArgs, printCompiled)) -> 
         for_ compileArgs $ \ca -> do
-            putStrLn $ "Compilation args: "
+            putStrLn "Compilation args: "
             for_ ca $ \(name, val) -> putStrLn $ "     " ++ name ++ " = " ++ repr val
             let scProg = compile program2 ca
-            print $ scProg
+            print scProg
 
             success <- newIORef 0
             fail <- newIORef 0
@@ -81,7 +83,7 @@ main = do
             for_ evalArgs $ \ea -> do 
                 let got = eval scProg ea
                 let expected = eval program2 (ea ++ ca)
-                putStr $ "Test case : "
+                putStr "Test case : "
                 for_ ea $ \(name, val) -> putStr $ name ++ " = " ++ repr val ++ "   "
                 
                 putStrLn $ if expected == got then ": SUCCESS" else ": FAIL"
@@ -100,11 +102,18 @@ main = do
     res <- readIORef results
     for_ (zip [1..] (reverse res)) $ \(i, (succ, fail)) -> do
         putStrLn $ "Test " ++ show i ++ ": " ++ show succ ++ " successful, " ++ show fail ++ " failed"
+        modifyIORef totalFails (+ fail)
 
     putStrLn "----ALLDONE----"
-    return ()
-    where 
+    
+    shouldBeZero <- readIORef totalFails
+    
+    when (shouldBeZero > 0) $ error $ "FAILED (" ++ show shouldBeZero ++ " errors total)"
+    
+    where
+        -- Simple test 
         programs = [program1, program2]
         tests = [prog1Tests, prog2Tests ]
 
+        -- Matrix test
         matrixTests = [prog2MatrixTests]

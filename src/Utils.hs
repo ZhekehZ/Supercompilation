@@ -1,7 +1,6 @@
 module Utils where
 
 import Lang
-import Decomposition
 import Data.List
 
 type FuncCall val bf bp = (Either Name (Either bf bp), [Term val bf bp])
@@ -31,7 +30,7 @@ getFree term = nub $ case term of
     Var x       -> [x]
     Fun _       -> []
     Val _       -> []
-    where getFreePM ((Pat _ args) :=> t) = getFree t \\ args
+    where getFreePM (Pat _ args :=> t) = getFree t \\ args
 
 
 lookupFun :: [Definition val bf bp] -> Name -> Term val bf bp
@@ -59,3 +58,6 @@ isVar _ = False
 
 isCon Con{} = True
 isCon _ = False
+
+findPMCase :: Name -> PatternMatching val bf bp -> Maybe (PatternMatchingCase val bf bp)
+findPMCase c = find (\(Pat c' _ :=> _) -> c == c')

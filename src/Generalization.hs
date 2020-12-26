@@ -7,7 +7,7 @@ import Data.Maybe
 import Data.List
 import Data.Bool
 import Control.Applicative
-import Instances 
+import TermEq 
 
 data SingleSub term = Name := term deriving (Eq, Show)
 type Substitution term = [SingleSub term]

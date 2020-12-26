@@ -33,7 +33,7 @@ cogen st (Branch (Node term meta) ch) =
                         modify (\(CGS defs (_:x)) -> CGS defs x)
                         [body] <- forM ch (cogen ((fun, args) : st))
                         modify (\(CGS defs x) -> CGS (Def fun (makeFun args body) : defs) x)
-                        return $ funcCallToApp (Left fun, (Var <$> args))
+                        return $ funcCallToApp (Left fun, Var <$> args)
 
         MetaSplit term cases -> do
             term : args <- for ch (cogen (("",[]) : st))
@@ -47,8 +47,7 @@ cogen st (Branch (Node term meta) ch) =
             args <- for ch (cogen (("", []) : st))
             return $ replaceT (last args) term
     where
-        makeFun []     body = body
-        makeFun (x:xs) body = x :-> makeFun xs body
+        makeFun = flip (foldr (:->))
 
         replaceT term (Let a v t) = Let a v (replaceT term t)
         replaceT term _ = term
