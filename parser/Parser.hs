@@ -4,6 +4,7 @@ import Text.Parsec
 import Text.Parsec.Text
 import Text.Parsec.Language
 import Control.Monad
+import Data.List
 
 import Lang
 import Utils
@@ -27,10 +28,12 @@ tok :: String -> Parsec String () ()
 tok = void . trim . string
 
 parens :: String -> Parsec String () a -> Parsec String () a
-parens [op, cls] p = do
-    void $ trim $ char op
+parens pat p = do
+    let Just idx = elemIndex '.' pat
+    let (bef, aft) = (take idx pat, drop (idx + 1) pat)
+    tok bef
     res <- trim p
-    void $ trim $ char cls
+    tok aft
     return res
 
 trim :: Parsec String () a -> Parsec String () a
@@ -75,11 +78,11 @@ arg :: Parsec String () TERM
 arg =  var                       
    <|> val                      
    <|> flip Con [] <$> uident   
-   <|> parens "()" term               
+   <|> parens "(.)" term               
    <|> ccase
 
 term :: Parsec String () TERM
-term =  parens "()" term 
+term =  parens "(.)" term 
     <|> ccase
     <|> func 
     <|> var 
@@ -90,13 +93,7 @@ cons :: Parsec String () TERM
 cons = Con <$> uident <*> many arg
 
 ccase :: Parsec String () TERM
-ccase = do
-    tok "case"
-    t <- term
-    tok "of"
-    pmcases <- parens "{}" $ many1 pmCase
-    return $ Case t pmcases
-
+ccase = Case <$> parens "case.of" term <*> parens "{.}" (many1 pmCase)
 
 pmCase :: Parsec String () (PatternMatchingCase Int BuiltinF BuiltinP)
 pmCase = do

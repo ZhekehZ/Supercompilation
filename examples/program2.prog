@@ -10,6 +10,7 @@ m1 x s op os = case x of {
                      Nil => True;
                      Cons p pp => m2 s p pp op os
                    }
+
 def m2 x p pp op os = case x of {
                         Nil => False;
                         Cons s ss => case eql s p of {

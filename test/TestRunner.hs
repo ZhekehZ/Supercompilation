@@ -39,7 +39,7 @@ main = do
             putStrLn $ "   Eval: " ++ show withoutSC
 
 
-            putStr $ "   Result: "
+            putStr "   Result: "
             if evaluated == expected 
             then do putStrLn $ "SUCCESS (" ++ show expected ++ " = " ++ show evaluated ++ ")" 
                     modifyIORef success (+1) 
@@ -51,9 +51,8 @@ main = do
             putStrLn "\n"
 
         
-        s <- readIORef success
-        f <- readIORef fail
-        modifyIORef results ((s, f) :)
+        res <- (,) <$> readIORef success <*> readIORef fail
+        modifyIORef results (res :)
 
         putStrLn "-------------"
     putStrLn "---  End  ---"
@@ -93,9 +92,8 @@ main = do
                     else modifyIORef fail (+1)
 
 
-            s <- readIORef success
-            f <- readIORef fail
-            modifyIORef results ((s, f) :)
+            res <- (,) <$> readIORef success <*> readIORef fail
+            modifyIORef results (res :)
 
             putStrLn ""
 
