@@ -9,6 +9,9 @@ import Lang
 import Utils
 import IntProgram
 
+------------------------------------------------------
+-- SYNTAX CONFIG
+
 synt = ["case", "of", "def", "where"]
 builtins = ["plus", "mul", "gt"]
 
@@ -17,42 +20,48 @@ parseBuiltin "plus" = Left Plus
 parseBuiltin "mul" = Left Mul
 parseBuiltin "gt" = Right Gt
 
+------------------------------------------------------
+-- HELPERS
 
-parens :: Parsec String () a -> Parsec String () a
-parens p = do
-    void $ andSp $ char '('
-    res <- andSp p
-    void $ andSp $ char ')'
+tok :: String -> Parsec String () ()
+tok = void . trim . string
+
+parens :: String -> Parsec String () a -> Parsec String () a
+parens [op, cls] p = do
+    void $ trim $ char op
+    res <- trim p
+    void $ trim $ char cls
     return res
 
-andSp :: Parsec String () a -> Parsec String () a
-andSp p = do
+trim :: Parsec String () a -> Parsec String () a
+trim p = do
     res <- p
     many blank
     return res
 
 blank :: Parsec String () ()
-blank = void $ char ' ' <|> char '\t'
+blank = void $ oneOf [' ', '\t'] 
 
 lident :: Parsec String () String
-lident = andSp $ (:) <$> oneOf ['a'..'z'] <*> many alphaNum
+lident = trim $ (:) <$> oneOf ['a'..'z'] <*> many alphaNum
 
 uident :: Parsec String () String
-uident = andSp $ (:) <$> oneOf ['A'..'Z'] <*> many alphaNum
+uident = trim $ (:) <$> oneOf ['A'..'Z'] <*> many alphaNum
+
+nat :: Parsec String () Int
+nat = read <$> trim (many1 $ oneOf ['0'..'9'])
 
 ------------------------
+-- PARSER
 
 var :: Parsec String () TERM
 var = do 
     name <- lookAhead lident
-    when (name `elem` synt) $ parserFail $ "invalid name: " ++ name
+    when (name `elem` synt) $ parserFail $ "invalid variable name: " ++ name
     Var <$> lident
 
 val :: Parsec String () TERM
-val = do
-    iS <- andSp $ many1 $ oneOf ['0'..'9']
-    let i = read iS :: Int 
-    return (Val i) 
+val = Val <$> nat 
 
 func :: Parsec String () TERM
 func = do
@@ -61,15 +70,16 @@ func = do
     let h = if f `notElem` builtins then Left f else Right $ parseBuiltin f
     return $ if null as then Var f else funcCallToApp (h, as)
 
+-- Parse function call argument
 arg :: Parsec String () TERM
-arg =  var 
-   <|> val
-   <|> parens term
-   <|> flip Con [] <$> uident 
+arg =  var                       
+   <|> val                      
+   <|> flip Con [] <$> uident   
+   <|> parens "()" term               
    <|> ccase
 
 term :: Parsec String () TERM
-term =  parens term 
+term =  parens "()" term 
     <|> ccase
     <|> func 
     <|> var 
@@ -81,32 +91,28 @@ cons = Con <$> uident <*> many arg
 
 ccase :: Parsec String () TERM
 ccase = do
-    andSp $ void (string "case")
+    tok "case"
     t <- term
-    andSp $ void (string "of")
-    andSp $ void (char '{')
-    pmcases <- many1 pmCase
-    andSp $ void (char '}')
+    tok "of"
+    pmcases <- parens "{}" $ many1 pmCase
     return $ Case t pmcases
 
 
 pmCase :: Parsec String () (PatternMatchingCase Int BuiltinF BuiltinP)
 pmCase = do
     con <- uident
-    argsV <- many var
-    let args = (\(Var v) -> v) <$> argsV
-    andSp $ void (string "=>")
+    args <- fmap getVarName <$> many var
+    tok "=>"
     t <- term
-    optional $ andSp $ char ';'
+    optional $ tok ";"
     return $ Pat con args :=> t
 
 def :: Parsec String () (Definition Int BuiltinF BuiltinP)
 def = do
-    andSp $ void (string "def")
+    tok "def"
     name <- lident
-    argsV <- many1 var
-    let args = (\(Var v) -> v) <$> argsV
-    andSp $ void (char '=')
+    args <- fmap getVarName <$> many var
+    tok "="
     Def name . argsToLam args <$> term
     where argsToLam = flip (foldr (:->))
 
@@ -114,14 +120,10 @@ prog :: Parsec String () PROGRAM
 prog = do
     many blank
     main <- term
-    andSp $ void (string "where")
+    tok "where"
     defs <- many def
     return (Program (Def "main" main : defs) "main")
 
 
-parseFile :: String -> IO PROGRAM
-parseFile fileName = do
-    text <- readFile fileName
-    let oneline = map (\x -> if x == '\n' then ' ' else x) text
-    let Right program = runParser prog () "" oneline
-    return program
+parseProg :: String -> PROGRAM
+parseProg = either (error "Parse error") id . runParser prog () "" . concatMap (' ':) . lines

@@ -9,13 +9,13 @@ import Embedding
 import Data.List
 import Data.Maybe
 import ProcessTree
+import Text.PrettyPrint
 
 data Meta val bf bp = Regular
                     | MetaUp Int !(Substitution (Term val bf bp))
                     | MetaSplit (Term val bf bp) ![(Name, [Name])]
                     | MetaFun [Name]
                     | MetaLet
-                    deriving Show
 
 data Node val bf bp = Node { getTerm    :: !(Term val bf bp)
                            , getMeta    :: !(Meta val bf bp)
@@ -40,11 +40,11 @@ buildTreeStep ec defs ptree =
             case substs of 
             Just  (i, e', e'iter, path, (g, s1, s2)) -> -- SUBSTITUTION
                 let en = foldr (\(x := t) e -> Let x t e) g s1
-                in tryNext $ pSetChildren [tToTree g] $ pSet (Node en MetaLet) ptree
+                in tryNext $ pSetChildren (tToTree <$> (range s1 ++ [g])) $ pSet (Node en MetaLet) ptree
             Nothing -> case coupling of 
                 Just (i, e', e'iter, path, (g, s1, s2)) -> -- COUPLING
                     let e'n = foldr (\(x := t) e -> Let x t e) g s2
-                    in tryNext $ pSetChildren (tToTree <$> (range s1 ++ [g])) $ pSet (Node e'n MetaLet) e'iter
+                    in tryNext $ pSetChildren (tToTree <$> (range s2 ++ [g])) $ pSet (Node e'n MetaLet) e'iter
                 Nothing -> case evalRedex <$> evalExpr1 ec defs e of
                         Just e' -> tryNext $ pSetChildren [tToTree e'] ptree 
                         _ -> let (ctx, red, mcon) = decompose e -- DRIVING
@@ -102,9 +102,23 @@ instance Show x => Show (Tree x) where
     showsPrec p (Branch x xs) = showString (replicate (p * 2) ' ') . showsPrec p x
                     . foldl (\pr x -> pr . showChar '\n' . showsPrec (p + 1) x) id xs
 
+instance (Show val, Show bf, Show bp) => Show (Meta val bf bp) where
+    show meta = case meta of 
+        Regular      -> "Regular"
+        MetaUp i sub -> "Fold (" ++ show i ++ " up): " ++ show (map (\(x := y) -> text $ x ++ " := " ++ showOneLine y) sub)
+        MetaSplit term cases -> "Split " ++ showOneLine term ++ ", cases: " ++ show (map fst cases)
+        MetaFun args -> "Function with args: " ++ show args
+        MetaLet -> "Let"
+        where 
+            showOneLine :: (Show val, Show bf, Show bp) => Term val bf bp -> String
+            showOneLine = shortVersion . renderStyle (Style OneLineMode 0 0) . prettyPrintTerm 0
+            shortVersion s = if length s > 40 then '`' : take 40 s ++ "...`" else s 
+
 instance (Show val, Show bf, Show bp) => Show (Node val bf bp) where
     showsPrec p (Node term meta) = let offset = replicate (p * 2) ' '
                                        idx = show p
                                        istr = replicate (4 - length idx) ' ' ++ idx
-                                   in showString ("    | Node\n" ++ offset ++ istr ++ "| TERM = ") . shows term 
-                                      . showString ("\n" ++ offset ++ "    | META = ") . shows meta
+                                   in showString ("    ┌ Node\n" ++ offset ++ istr ++ "| TERM:\n") 
+                                      . showString (shift (p * 2 + 4) (show $ prettyPrintTerm 0 term))
+                                      . showString ("\n" ++ offset ++ "    └ META = ") . shows meta
+        where shift p = show . vcat . fmap (text . ((replicate p ' ' ++ "|    ") ++)) . lines

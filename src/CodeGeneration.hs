@@ -45,15 +45,12 @@ cogen st (Branch (Node term meta) ch) =
 
         MetaLet -> do
             args <- for ch (cogen (("", []) : st))
-            return $ replaceT (last args) term
+            return $ substLam args term
     where
         makeFun = flip (foldr (:->))
 
-        replaceT term (Let a v t) = Let a v (replaceT term t)
-        replaceT term _ = term
-
-        letToFun term (Let a v t) = a :-> letToFun term t
-        letToFun term _ = term
+        substLam [a] t = a
+        substLam (a:as) (Let x _ t) = subst a x (substLam as t)
 
 
 compileTree ::  (Show val, Show bf, Show bp) => Tree (Node val bf bp) -> Program val bf bp

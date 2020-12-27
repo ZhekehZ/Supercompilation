@@ -3,6 +3,8 @@ module Lang where
 import Prelude hiding ((<>))
 import Text.PrettyPrint
 import Data.List
+import Data.Char
+import Data.Maybe
 
 type Name = String
 
@@ -72,22 +74,28 @@ prettyPrintTerm p t = case t of
     Val v     -> text (show v)
     Var v     -> text v
     Fun v     -> text v
-    ValF f as -> text (show f) <> printArgs as 
-    ValP f as -> text (show f) <> printArgs as 
-    Con  f as -> text f <> if null as then empty else printArgs as 
-    a :@ b    -> printParen (p > 6) $ hcat [prettyPrintTerm 6 a, char ' ', prettyPrintTerm 7 b]
+    ValF g as -> pt $ foldl (:@) (Fun $ toLowerCase $ show g) as
+    ValP g as -> pt $ foldl (:@) (Fun $ toLowerCase $ show g) as
+    Con  g as -> text g <> if null as then empty else printArgs as 
+    a :@ b    -> printParen (p > 6) $ hsep [prettyPrintTerm 6 a, prettyPrintTerm 7 b]
     a :-> b   -> printParen (p > 0) $ text ('\\' : a ++ " -> ") <> prettyPrintTerm 0 b
-    Case e cs -> vcat [hcat [text "case ", prettyPrintTerm 0 e, text " of {"], vcat (prettyPrintPMCase <$> cs), text "}"]
-    Let x e e' -> hcat [text $ "let " ++ x ++ " = ", prettyPrintTerm 0 e, text " in ", prettyPrintTerm 0 e']
-    where printArgs as = parens (sep $ punctuate (text ",") (prettyPrintTerm 0 <$> as))
+    Case e cs -> vcat [hsep [text "case", prettyPrintTerm 0 e, text "of {"], vcat (prettyPrintPMCase <$> cs), text "}"]
+    Let x e e' -> hsep [text $ "let " ++ x ++ " =", prettyPrintTerm 0 e, text "in", prettyPrintTerm 0 e']
+    where printArgs as = parens (hsep $ punctuate (text ",") (prettyPrintTerm 0 <$> as))
           printParen cond = if cond then parens else id
+          pt = prettyPrintTerm p 
+          toLowerCase = map (\s -> if s `elem` ['A'..'Z'] then chr (ord 'a' + ord s - ord 'A') else s)
 
 prettyPrintPMCase :: (Show val, Show bf, Show bp) => PatternMatchingCase val bf bp -> Doc
-prettyPrintPMCase (Pat c as :=> term) = hcat [text ("  " ++ c) <> if null as then empty else parens $ sep $ punctuate (text ",") (text <$> as)
-                                             , text " => ", prettyPrintTerm 0 term]
+prettyPrintPMCase (Pat c as :=> term) = hcat [text "  ", hsep $ text <$> (c : as), text " => ", prettyPrintTerm 0 term, text ";"]
 
 prettyPrintDefinition :: (Show val, Show bf, Show bp) => Definition val bf bp -> Doc
-prettyPrintDefinition (Def name term) = hcat [text name, text " = ", prettyPrintTerm 0 term] 
+prettyPrintDefinition (Def name term) = let (as, t) = splitLam term in hsep $ text ("def " ++ name) : map text as 
+                                                 ++ [text "=", prettyPrintTerm 0 t]
+       where splitLam (x :-> t) = case splitLam t of (xs, t) -> (x:xs, t)    
+             splitLam t = ([], t)
 
 prettyPrintProgram :: (Show val, Show bf, Show bp) => Program val bf bp -> Doc
-prettyPrintProgram (Program defs entry) = vcat $ text ("Program (entry = " ++ entry ++ "):") : fmap prettyPrintDefinition defs
+prettyPrintProgram (Program defs entry) = vcat $ prettyPrintTerm 0 main : text "where" : map prettyPrintDefinition odefs
+       where Def _ main = fromJust $ find (\(Def n _) -> n == entry) defs
+             odefs = filter (\(Def n _) -> n /= entry) defs
