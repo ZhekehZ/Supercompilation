@@ -111,7 +111,7 @@ instance (Show val, Show bf, Show bp) => Show (Meta val bf bp) where
         MetaLet -> "Let"
         where 
             showOneLine :: (Show val, Show bf, Show bp) => Term val bf bp -> String
-            showOneLine = shortVersion . renderStyle (Style OneLineMode 0 0) . prettyPrintTerm 0
+            showOneLine = shortVersion . renderStyle (Style OneLineMode 0 0) . prettyPrintTerm False 0
             shortVersion s = if length s > 40 then '`' : take 40 s ++ "...`" else s 
 
 instance (Show val, Show bf, Show bp) => Show (Node val bf bp) where
@@ -119,6 +119,6 @@ instance (Show val, Show bf, Show bp) => Show (Node val bf bp) where
                                        idx = show p
                                        istr = replicate (4 - length idx) ' ' ++ idx
                                    in showString ("    ┌ Node\n" ++ offset ++ istr ++ "| TERM:\n") 
-                                      . showString (shift (p * 2 + 4) (show $ prettyPrintTerm 0 term))
+                                      . showString (shift (p * 2 + 4) (show $ prettyPrintTerm False 0 term))
                                       . showString ("\n" ++ offset ++ "    └ META = ") . shows meta
         where shift p = show . vcat . fmap (text . ((replicate p ' ' ++ "|    ") ++)) . lines

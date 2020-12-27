@@ -1,0 +1,29 @@
+match s p
+
+where
+
+def 
+match s p = m1 p s p s
+
+def 
+m1 x s op os = case x of {
+                     Nil => True;
+                     Cons p pp => m2 s p pp op os
+                   }
+def m2 x p pp op os = case x of {
+                        Nil => False;
+                        Cons s ss => case eql s p of {
+                                       True => m1 pp ss op os;
+                                       False => next os op
+                                     };
+                      }
+
+def 
+next x p = case x of { Cons s ss => m1 p ss p ss }
+
+def 
+eql x y = case x of {
+                A => case y of { A =>  True; B => False; C => False; };
+                B => case y of { A => False; B =>  True; C => False; };
+                C => case y of { A => False; B => False; C =>  True; };
+              }

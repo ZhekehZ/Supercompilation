@@ -12,13 +12,12 @@ printHelp = do
     putStrLn "    args format: "
     putStrLn "        key1 val1 [key2 val2 ...]"
     putStrLn ""
-    putStrLn "    value must be string or integer"
+    putStrLn "    value must be a string or integer"
     putStrLn ""
     putStrLn "Example:"
     putStrLn "    sc input.txt output.txt p AAA"
 
 invalidCall = do
-    putStrLn "Error."
     printHelp
     exitFailure
 

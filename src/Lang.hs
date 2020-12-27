@@ -57,45 +57,47 @@ infixl 6 :@
 infix 5 :=>
 
 instance (Show val, Show bf, Show bp) => Show (Term val bf bp) where
-    show = show . prettyPrintTerm 0
+    show = show . prettyPrintTerm False 0
 
 instance (Show val, Show bf, Show bp) => Show (PatternMatchingCase val bf bp) where
-    show = show . prettyPrintPMCase
+    show = show . prettyPrintPMCase False
 
 instance (Show val, Show bf, Show bp) => Show (Definition val bf bp) where
-    show = show . prettyPrintDefinition
+    show = show . prettyPrintDefinition False
 
 instance (Show val, Show bf, Show bp) => Show (Program val bf bp) where
-    show = show . prettyPrintProgram
+    show = show . prettyPrintProgram False
 
 
-prettyPrintTerm :: (Show val, Show bf, Show bp) => Int -> Term val bf bp -> Doc
-prettyPrintTerm p t = case t of
-    Val v     -> text (show v)
-    Var v     -> text v
-    Fun v     -> text v
-    ValF g as -> pt $ foldl (:@) (Fun $ toLowerCase $ show g) as
-    ValP g as -> pt $ foldl (:@) (Fun $ toLowerCase $ show g) as
-    Con  g as -> text g <> if null as then empty else printArgs as 
-    a :@ b    -> printParen (p > 6) $ hsep [prettyPrintTerm 6 a, prettyPrintTerm 7 b]
-    a :-> b   -> printParen (p > 0) $ text ('\\' : a ++ " -> ") <> prettyPrintTerm 0 b
-    Case e cs -> vcat [hsep [text "case", prettyPrintTerm 0 e, text "of {"], vcat (prettyPrintPMCase <$> cs), text "}"]
-    Let x e e' -> hsep [text $ "let " ++ x ++ " =", prettyPrintTerm 0 e, text "in", prettyPrintTerm 0 e']
-    where printArgs as = parens (hsep $ punctuate (text ",") (prettyPrintTerm 0 <$> as))
+prettyPrintTerm :: (Show val, Show bf, Show bp) => Bool -> Int -> Term val bf bp -> Doc
+prettyPrintTerm verbose p t = case t of
+    Val v     -> vb "<val>" <> text (show v)
+    Var v     -> vb "<var>" <> text v
+    Fun v     -> vb "<fun>" <> text v
+    ValF g as -> vb "<vfn>" <> pt (foldl (:@) (Fun $ toLowerCase $ show g) as)
+    ValP g as -> vb "<vpd>" <> pt (foldl (:@) (Fun $ toLowerCase $ show g) as)
+    Con  g as -> vb "<con>" <> text g <> if null as then empty else printArgs as 
+    a :@ b    -> printParen (p > 6) $ hsep [pc 6 a, pc 7 b]
+    a :-> b   -> printParen (p > 0) $ text ('\\' : a ++ " -> ") <> pc 0 b
+    Case e cs -> vcat [hsep [text "case", pc 0 e, text "of {"], vcat (prettyPrintPMCase verbose <$> cs), text "}"]
+    Let x e e' -> hsep [text $ "let " ++ x ++ " =", pc 0 e, text "in", pc 0 e']
+    where printArgs as = parens (hsep $ punctuate (text ",") (pc 0 <$> as))
           printParen cond = if cond then parens else id
-          pt = prettyPrintTerm p 
+          pc = prettyPrintTerm verbose
+          pt = pc p 
           toLowerCase = map (\s -> if s `elem` ['A'..'Z'] then chr (ord 'a' + ord s - ord 'A') else s)
+          vb x = if verbose then text x else empty
 
-prettyPrintPMCase :: (Show val, Show bf, Show bp) => PatternMatchingCase val bf bp -> Doc
-prettyPrintPMCase (Pat c as :=> term) = hcat [text "  ", hsep $ text <$> (c : as), text " => ", prettyPrintTerm 0 term, text ";"]
+prettyPrintPMCase :: (Show val, Show bf, Show bp) => Bool -> PatternMatchingCase val bf bp -> Doc
+prettyPrintPMCase verbose (Pat c as :=> term) = hcat [text "  ", hsep $ text <$> (c : as), text " => ", prettyPrintTerm verbose 0 term, text ";"]
 
-prettyPrintDefinition :: (Show val, Show bf, Show bp) => Definition val bf bp -> Doc
-prettyPrintDefinition (Def name term) = let (as, t) = splitLam term in hsep $ text ("def " ++ name) : map text as 
-                                                 ++ [text "=", prettyPrintTerm 0 t]
+prettyPrintDefinition :: (Show val, Show bf, Show bp) => Bool -> Definition val bf bp -> Doc
+prettyPrintDefinition verbose (Def name term) = let (as, t) = splitLam term in hsep $ text ("def " ++ name) : map text as 
+                                                 ++ [text "=", prettyPrintTerm verbose 0 t]
        where splitLam (x :-> t) = case splitLam t of (xs, t) -> (x:xs, t)    
              splitLam t = ([], t)
 
-prettyPrintProgram :: (Show val, Show bf, Show bp) => Program val bf bp -> Doc
-prettyPrintProgram (Program defs entry) = vcat $ prettyPrintTerm 0 main : text "where" : map prettyPrintDefinition odefs
+prettyPrintProgram :: (Show val, Show bf, Show bp) => Bool -> Program val bf bp -> Doc
+prettyPrintProgram verbose (Program defs entry) = vcat $ prettyPrintTerm verbose 0 main : text "where" : map (prettyPrintDefinition verbose) odefs
        where Def _ main = fromJust $ find (\(Def n _) -> n == entry) defs
              odefs = filter (\(Def n _) -> n /= entry) defs

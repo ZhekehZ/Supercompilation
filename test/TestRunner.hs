@@ -6,6 +6,7 @@ import Lang
 import Data.Foldable
 import Data.IORef
 import Control.Monad
+import System.Exit
 
 
 main :: IO ()
@@ -108,7 +109,7 @@ main = do
     
     shouldBeZero <- readIORef totalFails
     
-    when (shouldBeZero > 0) $ error $ "FAILED (" ++ show shouldBeZero ++ " errors total)"
+    when (shouldBeZero > 0) $ die $ "FAILED (" ++ show shouldBeZero ++ " errors total)"
     
     where
         -- Simple test 
