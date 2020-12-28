@@ -10,4 +10,4 @@ test:
 
 clean: 
 	rm -rf ${BUILD_DIR}
-	rm testRunner
+	rm -rf testRunner

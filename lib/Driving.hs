@@ -118,7 +118,7 @@ instance (Show val, Show bf, Show bp) => Show (Node val bf bp) where
     showsPrec p (Node term meta) = let offset = replicate (p * 2) ' '
                                        idx = show p
                                        istr = replicate (4 - length idx) ' ' ++ idx
-                                   in showString ("    ┌ Node\n" ++ offset ++ istr ++ "| TERM:\n") 
+                                   in showString ("    ┌ Node\n" ++ offset ++ istr ++ "│ TERM:\n") 
                                       . showString (shift (p * 2 + 4) (show $ prettyPrintTerm False 0 term))
                                       . showString ("\n" ++ offset ++ "    └ META = ") . shows meta
-        where shift p = show . vcat . fmap (text . ((replicate p ' ' ++ "|    ") ++)) . lines
+        where shift p = show . vcat . fmap (text . ((replicate p ' ' ++ "│    ") ++)) . lines

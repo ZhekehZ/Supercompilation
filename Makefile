@@ -4,7 +4,7 @@ LIB = lib/*.hs
 all: tests sc
 
 repl:
-	ghci -i ${LIB} app/IntProgram.hs
+	ghci -i ${LIB} app/IntProgram.hs test/Program*.hs
 
 sc:
 	mkdir -p ${BUILD_DIR}

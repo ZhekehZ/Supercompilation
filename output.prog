@@ -1,0 +1,9 @@
+fun1 s
+where
+def fun1 s = case s of {
+               Nil => False;
+               Cons v1 v3 => case eql v1 A of {
+                               True => True;
+                               False => fun1 v3
+                             }
+             }
