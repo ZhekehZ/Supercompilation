@@ -187,3 +187,4 @@ def fun1 s = case s of {
                                False => fun1 v3
                              }
 ```
+> see [Parser.hs](https://github.com/ZhekehZ/Supercompilation/blob/main/app/Parser.hs) for syntax defails
