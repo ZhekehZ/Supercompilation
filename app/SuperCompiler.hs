@@ -37,7 +37,7 @@ main = do
     case args of 
         input : output : args | Just cArgs <- parseArgs args -> do
             text <- readFile input
-            let program = parseProg text
+            let program = parseProgram text
             let compiled = compile program cArgs
             writeFile output (show compiled)
         _ -> invalidCall

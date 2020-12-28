@@ -1,7 +1,7 @@
 # Supercompilation
 
 ### Usage:  
-  `make [tests | repl | app | clean]`  
+  `make [tests | repl | sc | clean]`  
 - `repl` --- run Haskell interpreter  
-- `app` --- build executable
+- `sc` --- build executable
 - `tests` --- compile and run tests

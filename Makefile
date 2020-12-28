@@ -1,24 +1,19 @@
 BUILD_DIR = build
-LIB = src/*.hs
-TEST_LIB = test/P*.hs
-PARSER_LIB = parser/*.hs
-TEST_RUNNER = test/TestRunner.hs
-APP = SuperCompiler.hs
+LIB = lib/*.hs
 
-all: tests app
+all: tests sc
 
 repl:
-	ghci -i ${LIB} ${TEST_LIB}
+	ghci -i ${LIB} app/IntProgram.hs
+
+sc:
+	mkdir -p ${BUILD_DIR}
+	ghc app/SuperCompiler.hs -i ${LIB} app/Parser.hs app/IntProgram.hs -outputdir ${BUILD_DIR} -O2 -o sc
 
 tests: 
-	mkdir -p build
-	ghc ${TEST_RUNNER} -i ${LIB} ${TEST_LIB} -outputdir ${BUILD_DIR} -O2 -o runTests && ./runTests
-
-app: 
-	mkdir -p build
-	ghc ${APP} -i ${LIB} ${TEST_LIB} ${PARSER_LIB} -outputdir ${BUILD_DIR} -O2 -o sc
+	$(MAKE) -C test
 
 clean: 
+	$(MAKE) -C test clean
 	rm -rf ${BUILD_DIR}
-	rm -rf runTests
-	rm -rf sc
+	rm sc

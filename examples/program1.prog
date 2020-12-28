@@ -1,18 +1,18 @@
-sum (squares (upto 1 arg)) 0
+sum (squares (upto 1 arg0)) 0
 
 where
 
-def upto n m = case gt n m of {
-            True => Nil;
-            False => Cons n (upto (plus n 1) m) 
-        }
-        
-def squares xs = case xs of {
-            Nil => Nil;
-            Cons x xs => Cons (mul x x) (squares xs)
-        }
-
 def sum xs a = case xs of {
-            Nil => a;
-            Cons x xs => sum xs (plus x a)
-        }
+                    Nil => a;
+                    Cons x xs => sum xs (x + a)
+               }
+
+def squares xs = case xs of {
+                    Nil => Nil;
+                    Cons x xs => Cons (x * x) (squares xs)
+                 }
+
+def upto m n = case m > n of {
+                    True => Nil;
+                    False => Cons m (upto (m + 1) n)
+               }

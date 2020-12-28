@@ -79,7 +79,7 @@ prettyPrintTerm verbose p t = case t of
     Con  g as -> vb "<con>" <> text g <> if null as then empty else printArgs as 
     a :@ b    -> printParen (p > 6) $ hsep [pc 6 a, pc 7 b]
     a :-> b   -> printParen (p > 0) $ text ('\\' : a ++ " -> ") <> pc 0 b
-    Case e cs -> vcat [hsep [text "case", pc 0 e, text "of {"], vcat (prettyPrintPMCase verbose <$> cs), text "}"]
+    Case e cs -> vcat [hsep [text "case", pc 0 e, text "of {"], vcat $ punctuate (text ";") (prettyPrintPMCase verbose <$> cs), text "}"]
     Let x e e' -> hsep [text $ "let " ++ x ++ " =", pc 0 e, text "in", pc 0 e']
     where printArgs as = parens (hsep $ punctuate (text ",") (pc 0 <$> as))
           printParen cond = if cond then parens else id
@@ -89,7 +89,7 @@ prettyPrintTerm verbose p t = case t of
           vb x = if verbose then text x else empty
 
 prettyPrintPMCase :: (Show val, Show bf, Show bp) => Bool -> PatternMatchingCase val bf bp -> Doc
-prettyPrintPMCase verbose (Pat c as :=> term) = hcat [text "  ", hsep $ text <$> (c : as), text " => ", prettyPrintTerm verbose 0 term, text ";"]
+prettyPrintPMCase verbose (Pat c as :=> term) =  hcat [text "  ", hsep $ text <$> (c : as), text " => ", prettyPrintTerm verbose 0 term]
 
 prettyPrintDefinition :: (Show val, Show bf, Show bp) => Bool -> Definition val bf bp -> Doc
 prettyPrintDefinition verbose (Def name term) = let (as, t) = splitLam term in hsep $ text ("def " ++ name) : map text as 
@@ -98,6 +98,7 @@ prettyPrintDefinition verbose (Def name term) = let (as, t) = splitLam term in h
              splitLam t = ([], t)
 
 prettyPrintProgram :: (Show val, Show bf, Show bp) => Bool -> Program val bf bp -> Doc
-prettyPrintProgram verbose (Program defs entry) = vcat $ prettyPrintTerm verbose 0 main : text "where" : map (prettyPrintDefinition verbose) odefs
+prettyPrintProgram verbose (Program defs entry) = vcat $ prettyPrintTerm verbose 0 main : 
+              if null odefs then [] else text "where" : map (prettyPrintDefinition verbose) odefs
        where Def _ main = fromJust $ find (\(Def n _) -> n == entry) defs
              odefs = filter (\(Def n _) -> n /= entry) defs

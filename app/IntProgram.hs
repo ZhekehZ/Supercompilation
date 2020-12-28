@@ -9,25 +9,29 @@ import CodeGeneration
 import Generalization
 import Data.Maybe
 
-data BuiltinF = Plus | Minus | Mul   deriving (Show, Eq)
-data BuiltinP = Gt | Eql             deriving (Show, Eq)
+data BuiltinF = Plus | Minus | Mul | Div | Mod  deriving (Show, Eq)
+data BuiltinP = Gt | Eql | Lt                   deriving (Show, Eq)
 
 type BFE = BuiltinFunctionEval Int BuiltinF
 type BPE = BuiltinPredicateEval Int BuiltinP
 type PROGRAM = Program Int BuiltinF BuiltinP
 type TERM = Term Int BuiltinF BuiltinP
+type DEFINITION = Definition Int BuiltinF BuiltinP
 
 evalIntF :: BFE
 evalIntF bf args = case (bf, args) of
   (Plus , [x, y]) -> x + y
   (Minus, [x, y]) -> x - y
   (Mul  , [x, y]) -> x * y
+  (Div  , [x, y]) -> x `div` y
+  (Mod  , [x, y]) -> x `mod` y
   _  -> error ("Invalid function call: " ++ show bf ++ ", arguments = " ++ show args ++ ")")
 
 evalIntP :: BPE
 evalIntP bp args = case (bp, args) of
   (Gt,   [x, y]) -> x > y
   (Eql,  [x, y]) -> x == y
+  (Lt,   [x, y]) -> x < y
   _  -> error ("Invalid predicate call: " ++ show bp ++ ", arguments = " ++ show args ++ ")")
 
 
@@ -48,7 +52,6 @@ termToStr _ = Nothing
 
 repr :: TERM -> String
 repr t = fromMaybe (show t) (termToStr t) 
-
 
 applyDefaults :: PROGRAM -> [(Name, TERM)] -> PROGRAM
 applyDefaults (Program defs entry) defaults = 
