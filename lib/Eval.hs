@@ -57,7 +57,7 @@ evalExpr1 evalContext@(EC bfEval bpEval) defines expression = case expression of
   (Let x e t)  -> (flip (Let x) t <$> eval e) <|> Just (subst e x t)
   (Case e pms) -> (flip Case pms <$> eval e) <|>
                   case e of
-                      Con c args -> case find (\(Pat c' _ :=> _) -> c == c') pms of
+                      Con c args -> case findPMCase c pms of
                             Just (Pat _ an :=> t) -> 
                                 let newNames = getFreeName (getFree e ++ (getFree t \\ an)) an
                                     t' = foldl (\t (from, to) -> rename from to t) t (zip an newNames)

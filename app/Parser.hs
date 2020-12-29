@@ -24,7 +24,8 @@ data IRExpr = IVar Name
 
 parseProgram :: String -> PROGRAM
 parseProgram text = 
-    case runParser (do { main <- convertIRtoTerm <$> expr
+    case runParser (do { t_whiteSpace
+                       ; main <- convertIRtoTerm <$> expr
                        ; defs <- optionMaybe (t_reserved "where" >> many (convertIRtoDef <$> definition))
                        ; return $ Program (Def "main" main : fromMaybe [] defs) "main"
                        }

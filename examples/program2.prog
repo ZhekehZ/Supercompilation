@@ -1,3 +1,6 @@
+
+{- KMP test -}
+
 match s p
 
 where

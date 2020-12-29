@@ -4,7 +4,7 @@ LIB = lib/*.hs
 all: tests sc
 
 repl:
-	ghci -i ${LIB} app/IntProgram.hs test/Program*.hs
+	ghci -i ${LIB} app/*.hs test/Program*.hs
 
 sc:
 	mkdir -p ${BUILD_DIR}
@@ -16,4 +16,4 @@ tests:
 clean: 
 	$(MAKE) -C test clean
 	rm -rf ${BUILD_DIR}
-	rm sc
+	rm -rf sc

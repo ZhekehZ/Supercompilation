@@ -76,13 +76,12 @@ prettyPrintTerm verbose p t = case t of
     Fun v     -> vb "<fun>" <> text v
     ValF g as -> vb "<vfn>" <> pt (foldl (:@) (Fun $ toLowerCase $ show g) as)
     ValP g as -> vb "<vpd>" <> pt (foldl (:@) (Fun $ toLowerCase $ show g) as)
-    Con  g as -> vb "<con>" <> text g <> if null as then empty else printArgs as 
+    Con  g as -> vb "<con>" <> pt (foldl (:@) (Fun g) as)
     a :@ b    -> printParen (p > 6) $ hsep [pc 6 a, pc 7 b]
     a :-> b   -> printParen (p > 0) $ text ('\\' : a ++ " -> ") <> pc 0 b
     Case e cs -> vcat [hsep [text "case", pc 0 e, text "of {"], vcat $ punctuate (text ";") (prettyPrintPMCase verbose <$> cs), text "}"]
     Let x e e' -> hsep [text $ "let " ++ x ++ " =", pc 0 e, text "in", pc 0 e']
-    where printArgs as = parens (hsep $ punctuate (text ",") (pc 0 <$> as))
-          printParen cond = if cond then parens else id
+    where printParen cond = if cond then parens else id
           pc = prettyPrintTerm verbose
           pt = pc p 
           toLowerCase = map (\s -> if s `elem` ['A'..'Z'] then chr (ord 'a' + ord s - ord 'A') else s)
