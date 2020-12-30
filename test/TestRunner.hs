@@ -86,7 +86,7 @@ main = do
                 putStr "Test case : "
                 for_ ea $ \(name, val) -> putStr $ name ++ " = " ++ repr val ++ "   "
                 
-                putStrLn $ if expected == got then ": SUCCESS" else ": FAIL"
+                putStrLn $ if expected == got then ": SUCCESS (" ++ show got ++ ")" else ": FAIL"
                 if expected == got
                     then modifyIORef success (+1)
                     else modifyIORef fail (+1)
@@ -115,4 +115,4 @@ main = do
         tests = [prog1Tests, prog2Tests ]
 
         -- Matrix test
-        matrixTests = [prog2MatrixTests]
+        matrixTests = [prog2MatrixTests, prog2MatrixTestsRev]

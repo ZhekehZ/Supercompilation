@@ -1,7 +1,5 @@
 
-{-
-     Sum of squares test
--}
+{- Sum of squares test -}
 
 sum (squares (upto 1 arg0)) 0
 

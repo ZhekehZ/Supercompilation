@@ -81,6 +81,7 @@ prog2MatrixTests = (
         , "ABB"
         , "AAB"
         , "ABC"
+        , "ABAC"
         , "AAAB"
         , "ABABAB"
         , "ABCAABB"
@@ -90,13 +91,41 @@ prog2MatrixTests = (
         ] :: [COMPILEARGUMENTS]
     , 
     (:[]) . (,) "s" . strToTerm <$> 
-        [ "AAAAAAA"
+        [ "BAC"
+        , "AAAAAAA"
         , "AAAABBBBBBCCCCC"
         , "BABABABABACBABABABAB"
         , "CCCCCCAAAAAAAACCCCCCAAA"
         , "BABABABABABCAABBBABABAB"
         , "CCCCCAAAAABAAAABACACCC"
         , "BACBBACAAABACBBAC"
+        ] :: [EVALARGUMENTS]
+    ,
+    True
+    )
+
+prog2MatrixTestsRev :: TESTMATRIX
+prog2MatrixTestsRev = (
+    (:[]) . (,) "s" . strToTerm <$> 
+        [ "A"
+        , "AA"
+        , "AAA"
+        , "AB"
+        , "ABB"
+        , "AAB"
+        , "ABC"
+        , "ABAC"
+        , "AAAB"
+        , "AABB"
+        , "BABACC"
+        ] :: [COMPILEARGUMENTS]
+    , 
+    (:[]) . (,) "p" . strToTerm <$> 
+        [ "A"
+        , "AA"
+        , "AB"
+        , "AC"
+        , "BA"
         ] :: [EVALARGUMENTS]
     ,
     True
