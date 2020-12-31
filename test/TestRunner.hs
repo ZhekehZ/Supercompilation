@@ -73,7 +73,7 @@ main = do
             putStrLn "Compilation args: "
             for_ ca $ \(name, val) -> putStrLn $ "     " ++ name ++ " = " ++ repr val
             let scProg = compile program2 ca
-            print scProg
+            when printCompiled $ print scProg
 
             success <- newIORef 0
             fail <- newIORef 0
