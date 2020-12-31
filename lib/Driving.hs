@@ -29,7 +29,7 @@ setMeta meta iter = let (Node term _) = getCurrent iter in pSet (Node term meta)
 buildTreeStep :: (Eq val, Eq bf, Eq bp) => EvalContext val bf bp -> [Definition val bf bp] -> TreeIterator (Node val bf bp) ->
                                 Either (TreeIterator (Node val bf bp)) (TreeIterator (Node val bf bp))
 buildTreeStep ec defs ptree = 
-    let tryEval = evalExpr ec defs e in
+    let (tryEval, _) = evalExpr ec defs e in
     if isNF tryEval then tryNext (pSet (Node tryEval Regular) ptree) else -- NF
     case renaming of
         Just (i, e', e'iter, path, _) -> -- RENAMING

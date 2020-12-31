@@ -69,7 +69,10 @@ compile prog defaults =  compileTree (buildProgramTree context $ applyDefaults p
 
 -- Evaluation
 eval :: PROGRAM -> [(Name, TERM)] -> TERM
-eval prog defaults = evalProgram (applyDefaults prog defaults) context
+eval a = fst . evalAndCountSteps a
+
+evalAndCountSteps :: PROGRAM -> [(Name, TERM)] -> (TERM, Int)
+evalAndCountSteps prog defaults = evalProgram (applyDefaults prog defaults) context
 
 tree :: PROGRAM -> [(Name, TERM)] -> Tree (Node Int BuiltinF BuiltinP)
 tree prog defaults = buildProgramTree (EC evalIntF evalIntP) (applyDefaults prog defaults)

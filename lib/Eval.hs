@@ -8,7 +8,7 @@ import Control.Applicative
 data EvalContext val bf bp = EC (BuiltinFunctionEval val bf) (BuiltinPredicateEval val bp)
 
 -- evaluate program in given evaluation context
-evalProgram :: Program val bf bp -> EvalContext val bf bp -> Term val bf bp
+evalProgram :: Program val bf bp -> EvalContext val bf bp -> (Term val bf bp, Int)
 evalProgram (Program def entry) context = evalExpr context def (lookupFun def entry)
 
 rename :: Name -> Name -> Term val bf bp -> Term val bf bp
@@ -36,8 +36,9 @@ subst new name expr = case expr of
             in Pat c a' :=> substThis t' 
 
 -- Evaluate expression with given context and function definitions
-evalExpr :: EvalContext val bf bp -> [Definition val bf bp] -> Term val bf bp -> Term val bf bp
-evalExpr context def t = maybe t (evalExpr context def) (evalExpr1 context def t)
+evalExpr :: EvalContext val bf bp -> [Definition val bf bp] -> Term val bf bp -> (Term val bf bp, Int)
+evalExpr = helper 0
+    where helper a context def t = maybe (t, a) (helper (a + 1) context def) $ evalExpr1 context def t
 
 evalExprN :: EvalContext val bf bp -> [Definition val bf bp] -> Term val bf bp -> Int -> Term val bf bp
 evalExprN context def t 0 = t

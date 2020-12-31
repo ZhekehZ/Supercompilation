@@ -108,11 +108,48 @@ main = do
     shouldBeZero <- readIORef totalFails
     
     when (shouldBeZero > 0) $ die $ "FAILED (" ++ show shouldBeZero ++ " errors total)"
-    
+
+    kmpTestCountSteps
+
     where
         -- Simple test 
         programs = [program1, program2]
         tests = [prog1Tests, prog2Tests ]
 
         -- Matrix test
-        matrixTests = [prog2MatrixTests, prog2MatrixTestsRev]
+        matrixTests = [prog2MatrixTests, prog2MatrixTestsRev] :: [TESTMATRIX]
+
+        kmpTestCountSteps = do
+            putStrLn "Performance test"
+
+            let (p, s, _) = prog2MatrixTests
+            let ss = snd . head <$> s
+            let ps = snd . head <$> p
+            
+            let minCellWidth = 9
+            let cellWidths = map (max minCellWidth . length . repr) ps
+            let fstWid = foldl max 0 (length . repr <$> ss)
+
+            putStr $ replicate fstWid ' '
+            for_ (zip ps cellWidths) $ \(pat, wid) -> do
+                let patStr = repr pat
+                putStr $ '|' : patStr ++ replicate (wid - length patStr) ' '
+            putStrLn ""
+
+            let Program defs _ = program2
+            let line = replicate fstWid '─' ++ foldl (\s w -> s ++ '┼' : replicate w '─') "" cellWidths
+
+            for_ ss $ \str -> do
+                let strStr = repr str
+                putStrLn line
+                putStr $ strStr ++ replicate (fstWid - length strStr) ' '
+                for_ (zip ps cellWidths) $ \(pat, wid) -> do
+                    let compiled = compile program2 [("p", pat)]
+                    let evaled = eval program2 [("p", pat)]
+                    let (res1, compCount) = evalAndCountSteps compiled [("s", str)]
+                    let (res2, evalCount) = evalAndCountSteps (Program (Def "" evaled:defs) "") [("s", str)]
+                    let resStr = show compCount ++ "/" ++ show evalCount
+                    putStr $ '|' : resStr ++ replicate (wid - length resStr) ' '
+                putStrLn ""
+                    
+
