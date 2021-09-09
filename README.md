@@ -191,7 +191,8 @@ def fun1 s = case s of {
 > see [Parser.hs](https://github.com/ZhekehZ/Supercompilation/blob/main/app/Parser.hs) for syntax defails
 
 ### Performance
-Performance of string searching (in the number of reduction steps): `superCompile p` vs `eval p`
+Performance of string searching (in the number of reduction steps): `superCompile p` vs `eval p`  
+
 string\pattern |A        |AA       |AAA      |AB       |ABB      |AAB      |ABC      |ABAC     |AAAB     |ABABAB   |ABCAABB  |AAABAAA  |AAABACA  |AAABACBB 
 -----------------------|--------- | ---------|---------|---------|---------|---------|---------|---------|---------|---------|---------|---------|---------|---------
 BAC                    |8/36     |13/89    |13/89    |15/89    |15/89    |13/89    |15/89    |15/89    |13/89    |15/89    |15/89    |13/89    |13/89    |15/89    
